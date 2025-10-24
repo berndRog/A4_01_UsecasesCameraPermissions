@@ -9,13 +9,13 @@ import de.rogallab.mobile.data.repositories.PersonRepository
 import de.rogallab.mobile.domain.IAppStorage
 import de.rogallab.mobile.domain.IImageUseCases
 import de.rogallab.mobile.domain.IMediaStore
-import de.rogallab.mobile.domain.IPeopleUcFetchSorted
+import de.rogallab.mobile.domain.IPeopleUcFetch
 import de.rogallab.mobile.domain.IPersonRepository
 import de.rogallab.mobile.domain.IPersonUseCases
 import de.rogallab.mobile.domain.usecases.images.ImageUcCaptureCam
 import de.rogallab.mobile.domain.usecases.images.ImageUcSelectGal
 import de.rogallab.mobile.domain.usecases.images.ImageUseCases
-import de.rogallab.mobile.domain.usecases.people.PeopleUcFetchSorted
+import de.rogallab.mobile.domain.usecases.people.PeopleUcFetch
 import de.rogallab.mobile.domain.usecases.person.PersonUcCreate
 import de.rogallab.mobile.domain.usecases.person.PersonUcFetchById
 import de.rogallab.mobile.domain.usecases.person.PersonUcRemove
@@ -85,8 +85,8 @@ val defModules: Module = module {
     // domain modules
     // UseCases
     logInfo(tag, "single    -> PeopleUcFetchSorted: IPeopleUcFetchSorted")
-    single<IPeopleUcFetchSorted> {
-        PeopleUcFetchSorted(get<IPersonRepository>())
+    single<IPeopleUcFetch> {
+        PeopleUcFetch(get<IPersonRepository>())
     }
 
     // single PersonUseCases
@@ -145,7 +145,7 @@ val defModules: Module = module {
     logInfo(tag, "viewModel -> PersonViewModel")
     viewModel { (navHandler: INavHandler) ->
         PersonViewModel(
-           _fetchSorted = get<IPeopleUcFetchSorted>(),
+           _fetchSorted = get<IPeopleUcFetch>(),
            _personUc = get<IPersonUseCases>(),
           // _repository = get<IPersonRepository>(),
            navHandler = navHandler,

@@ -1,7 +1,7 @@
 package de.rogallab.mobile.ui.people
 
 import androidx.compose.material3.SnackbarDuration
-import de.rogallab.mobile.domain.IPeopleUcFetchSorted
+import de.rogallab.mobile.domain.IPeopleUcFetch
 import de.rogallab.mobile.domain.IPersonUseCases
 import de.rogallab.mobile.domain.entities.Person
 import de.rogallab.mobile.domain.utilities.logDebug
@@ -15,7 +15,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 class PersonViewModel(
-   private val _fetchSorted: IPeopleUcFetchSorted,
+   private val _fetchSorted: IPeopleUcFetch,
    private val _personUc: IPersonUseCases,
    navHandler: INavHandler,
    private val _validator: PersonValidator

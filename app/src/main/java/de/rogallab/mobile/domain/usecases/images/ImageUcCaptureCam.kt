@@ -10,13 +10,8 @@ import de.rogallab.mobile.domain.utilities.logDebug
 class ImageUcCaptureCam(
    private val _mediaStore: IMediaStore
 ) {
-   suspend operator fun invoke(
-      capturedImageUriString: String,
-      groupName: String
-   ): Result<Uri> {
+   suspend operator fun invoke(capturedImageUriString: String, groupName: String): Result<Uri> {
       return try {
-         val tag = "<-CaptureImageUC"
-
          // Parse the image URI captured by the camera
          val sourceUri = capturedImageUriString.toUri()
 
@@ -27,7 +22,6 @@ class ImageUcCaptureCam(
 
          // Convert MediaStore URI to app's private storage
          val uriStorage = _mediaStore.convertMediaStoreToAppStorage(uriMediaStore, groupName)
-         logDebug(tag,"uriStorage: $uriStorage")
          uriStorage ?: return Result.failure(IoException(
             "Failed to copy image from MediaStore to app storage"))
 

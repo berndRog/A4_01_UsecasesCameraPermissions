@@ -3,11 +3,7 @@ package de.rogallab.mobile.ui.images
 import androidx.lifecycle.viewModelScope
 import de.rogallab.mobile.domain.IImageUseCases
 import de.rogallab.mobile.ui.base.BaseViewModel
-import de.rogallab.mobile.ui.base.updateState
 import de.rogallab.mobile.ui.navigation.INavHandler
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 class ImageViewModel(
@@ -43,10 +39,11 @@ class ImageViewModel(
 
    fun captureImage(
       uriString: String,
+      groupName: String,
       onResult: (String?) -> Unit // Event to update imagePath in person
    ){
       viewModelScope.launch {
-         _imageUc.captureImage(uriString, "").fold(
+         _imageUc.captureImage(uriString, groupName).fold(
             onSuccess = { uri ->
                // updateState(_imageUiStateFlow) { copy(imageUri = uri) }
                // update imagePath instead

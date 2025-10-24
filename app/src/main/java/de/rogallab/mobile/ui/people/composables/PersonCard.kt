@@ -1,4 +1,4 @@
-package de.rogallab.mobile.ui.features.people.composables
+package de.rogallab.mobile.ui.people.composables
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row

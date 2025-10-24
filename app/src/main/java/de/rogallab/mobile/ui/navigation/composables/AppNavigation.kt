@@ -17,9 +17,9 @@ import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
 import de.rogallab.mobile.domain.utilities.logComp
 import de.rogallab.mobile.domain.utilities.logDebug
-import de.rogallab.mobile.ui.features.people.composables.PeopleListScreen
+import de.rogallab.mobile.ui.people.composables.PeopleListScreen
 import de.rogallab.mobile.ui.people.composables.PersonDetailScreen
-import de.rogallab.mobile.ui.features.people.composables.PersonInputScreen
+import de.rogallab.mobile.ui.people.composables.PersonInputScreen
 import de.rogallab.mobile.ui.images.ImageViewModel
 import de.rogallab.mobile.ui.navigation.Nav3ViewModel
 import de.rogallab.mobile.ui.navigation.PeopleList

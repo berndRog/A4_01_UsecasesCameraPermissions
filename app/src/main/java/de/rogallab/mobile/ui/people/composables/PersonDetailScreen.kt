@@ -1,7 +1,5 @@
 package de.rogallab.mobile.ui.people.composables
 
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -12,36 +10,17 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.compose.LocalLifecycleOwner
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import de.rogallab.mobile.Globals
 import de.rogallab.mobile.R
 import de.rogallab.mobile.domain.utilities.logComp
-import de.rogallab.mobile.domain.utilities.logVerbose
+import de.rogallab.mobile.ui.base.composables.CollectBy
 import de.rogallab.mobile.ui.errors.ErrorHandler
-import de.rogallab.mobile.ui.features.people.composables.PersonContent
 import de.rogallab.mobile.ui.images.ImageViewModel
 import de.rogallab.mobile.ui.people.PersonIntent
+import de.rogallab.mobile.ui.people.PersonUiState
 import de.rogallab.mobile.ui.people.PersonValidator
 import de.rogallab.mobile.ui.people.PersonViewModel
-import kotlinx.coroutines.flow.StateFlow
 import org.koin.compose.koinInject
-
-@Composable
-fun <T> collectBy (uiStateFlow: StateFlow<T>, tag:String ): T {
-   val lifecycle = (LocalActivity.current as? ComponentActivity)?.lifecycle
-      ?: LocalLifecycleOwner.current.lifecycle
-   val uiState: T by uiStateFlow.collectAsStateWithLifecycle(
-      lifecycle = lifecycle,
-      minActiveState = Lifecycle.State.STARTED
-   )
-   LaunchedEffect(uiState) {
-      logVerbose(tag, "uiState: ${uiState.toString()}")
-   }
-   return uiState
-}
-
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -57,18 +36,8 @@ fun PersonDetailScreen(
 
    val groupName = Globals.FILE_NAME.split(".").first()
 
-   // observe the personUiStateFlow in the ViewModel
-//   val lifecycle = (LocalActivity.current as? ComponentActivity)?.lifecycle
-//      ?: LocalLifecycleOwner.current.lifecycle
-//   val personUiState by viewModel.personUiStateFlow.collectAsStateWithLifecycle(
-//      lifecycle = lifecycle,
-//      minActiveState = Lifecycle.State.STARTED
-//   )
-//   LaunchedEffect(personUiState.person) {
-//      logDebug(tag, "PersonUiState: ${personUiState.person}")
-//   }
-   val personUiState = collectBy(viewModel.personUiStateFlow, tag)
-
+   // observe PersonUiStateFlow
+   val personUiState: PersonUiState = CollectBy(viewModel.personUiStateFlow, tag)
 
    // fetch person by id
    LaunchedEffect(id) {
@@ -76,7 +45,6 @@ fun PersonDetailScreen(
    }
 
    val snackbarHostState = remember { SnackbarHostState() }
-
    Scaffold(
       contentColor = MaterialTheme.colorScheme.onBackground,
       contentWindowInsets = WindowInsets.safeDrawing, // .safeContent .safeGestures,
@@ -137,7 +105,7 @@ fun PersonDetailScreen(
                }
             },
             onCaptureImage = {
-               imageViewModel.captureImage(it) { uriString ->
+               imageViewModel.captureImage(it, groupName) { uriString ->
                   viewModel.handlePersonIntent(PersonIntent.ImagePathChange(uriString))
                }
             },

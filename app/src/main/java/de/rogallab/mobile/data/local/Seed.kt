@@ -1,35 +1,44 @@
 package de.rogallab.mobile.data.local
 
 import android.content.Context
-import de.rogallab.mobile.Globals.FILE_NAME
+import de.rogallab.mobile.Globals
 import de.rogallab.mobile.R
 import de.rogallab.mobile.domain.IAppStorage
 import de.rogallab.mobile.domain.entities.Person
 import de.rogallab.mobile.domain.utilities.logDebug
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.runBlocking
+import org.koin.core.component.KoinComponent
+import org.koin.core.component.inject
 import java.io.File
 import java.util.Locale
+import kotlin.collections.forEach
+import kotlin.collections.indices
+import kotlin.collections.random
+import kotlin.io.nameWithoutExtension
+import kotlin.let
 import kotlin.random.Random
+import kotlin.text.format
+import kotlin.text.lowercase
 
 class Seed(
    private val _context: Context,
-   private val _appStorage: IAppStorage,
    private val _isTest: Boolean = false
-) {
+): KoinComponent {
+
+   private val _appStorage: IAppStorage by inject()
+
    var people: MutableList<Person> = mutableListOf<Person>()
    
    private val _imagesUri = mutableListOf<String>()
-   private val _fileName = FILE_NAME
+   private val _fileName = Globals.file_name
    private val _imageDirectoryName = File(_fileName).nameWithoutExtension
 
    init {
       val firstNames = mutableListOf(
          "Arne", "Berta", "Cord", "Dagmar", "Ernst", "Frieda", "Günter", "Hanna",
          "Ingo", "Johanna", "Klaus", "Luise", "Martin", "Nadja", "Otto", "Patrizia",
-         "Quirin", "Rebecca", "Stefan", "Tanja", "Uwe", "Veronika", "Walter", "Xaver",
-         "Yvonne", "Zwantje")
+         "Quirin", "Rebecca", "Stefan", "Tanja", "Uwe", "Veronika", "Walter", "Xenia",
+         "Yannick", "Zwantje")
       val lastNames = mutableListOf(
          "Arndt", "Bauer", "Conrad", "Diehl", "Engel", "Fischer", "Graf", "Hoffmann",
          "Imhoff", "Jung", "Klein", "Lang", "Meier", "Neumann", "Olbrich", "Peters",
@@ -58,11 +67,7 @@ class Seed(
       }
 
       // convert the drawables into image files
-      if(!_isTest) {
-         runBlocking {
-            createImages()
-         }
-      }
+      if(!_isTest) runBlocking{   createImages()  }
    }
 
    private suspend fun createImages() {
@@ -75,13 +80,13 @@ class Seed(
          R.drawable.man_11, R.drawable.woman_11, R.drawable.man_12, R.drawable.woman_12,
          R.drawable.man_13, R.drawable.woman_13
       )
+
       var index = -1
       drawables.forEach { it: Int ->  // drawable id
          index++
          val uuidString = String.format(Locale.ROOT, "%02d000000-0000-0000-0000-000000000000", index + 1)
-         // images/filename/
+         // /data/data/de.rogallab.mobile.images/files/images/filename/
          _appStorage.convertDrawableToAppStorage(
-            context = _context,
             drawableId = it,
             pathName = _imageDirectoryName,
             uuidString = uuidString
@@ -91,13 +96,6 @@ class Seed(
                people[index] = people[index].copy(imagePath = uriString)
             }
          }
-   }
-}
-
-   suspend fun disposeImages() {
-      _imagesUri.forEach { imageUrl ->
-         logDebug("<disposeImages>", "Url $imageUrl")
-         _appStorage.deleteImageOnAppStorage(imageUrl)
       }
    }
 }

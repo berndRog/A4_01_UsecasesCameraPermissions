@@ -5,6 +5,10 @@ import de.rogallab.mobile.data.IDataStore
 import de.rogallab.mobile.di.appModules
 import de.rogallab.mobile.domain.utilities.logInfo
 import de.rogallab.mobile.ui.people.PersonViewModel
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import org.koin.android.ext.android.inject
 import org.koin.android.ext.koin.androidContext
 import org.koin.android.ext.koin.androidLogger
@@ -13,7 +17,12 @@ import org.koin.core.context.startKoin
 import org.koin.core.logger.Level
 import kotlin.getValue
 
+
 class MainApplication : Application() {
+
+
+   private val _dataStore: IDataStore by inject()
+   private val _appScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
    override fun onCreate() {
       super.onCreate()
@@ -29,8 +38,9 @@ class MainApplication : Application() {
          modules(appModules)
       }
 
-      val _dataStore: IDataStore by inject()
-      _dataStore.initialize()
+      _appScope.launch {
+         _dataStore.initialize()
+      }
    }
 
    companion object {

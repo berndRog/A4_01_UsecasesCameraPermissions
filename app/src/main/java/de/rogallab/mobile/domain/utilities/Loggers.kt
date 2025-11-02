@@ -24,10 +24,10 @@ fun logVerbose(tag: String, message: String) {
 }
 fun logComp(tag: String, message: String) {
    val msg = formatMessage(message)
-   if (Globals.isComposition) Log.d(tag, msg)
+   if (Globals.isComp) Log.d(tag, msg)
 }
 
 
 
 private fun formatMessage(message: String) =
-   String.format("%-70s %s", message, Thread.currentThread().toString())
+   String.format("%-110s %s", message, Thread.currentThread().toString())

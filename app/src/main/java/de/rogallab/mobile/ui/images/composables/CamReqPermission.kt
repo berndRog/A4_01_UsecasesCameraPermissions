@@ -2,16 +2,12 @@ package de.rogallab.mobile.ui.images.composables
 
 import android.Manifest
 import android.content.pm.PackageManager
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
@@ -32,9 +28,10 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import de.rogallab.mobile.R
 import de.rogallab.mobile.domain.utilities.logVerbose
+import de.rogallab.mobile.ui.permissions.RequireCamera
 
 @Composable
-fun CamCheckPermission(
+fun CamReqPermission(
    handleErrorEvent: (String) -> Unit,
    onPermissionGranted: @Composable () -> Unit
 ) {
@@ -45,21 +42,20 @@ fun CamCheckPermission(
    val context = LocalContext.current
    var hasCameraPermission by remember {
       mutableStateOf(
-         ContextCompat.checkSelfPermission(
-            context,
-            Manifest.permission.CAMERA
-         ) == PackageManager.PERMISSION_GRANTED
+         ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA)
+            == PackageManager.PERMISSION_GRANTED
       )
    }
 
+//   val launcher = rememberLauncherForActivityResult(
+//      contract = ActivityResultContracts.RequestPermission()
+//   ) { isGranted ->
+//      logVerbose(tag, "isGranted: $isGranted")
+//      hasCameraPermission = isGranted
+//      if (!isGranted) handleErrorEvent("Camera permission denied")
+//   }
 
-   val launcher = rememberLauncherForActivityResult(
-      contract = ActivityResultContracts.RequestPermission()
-   ) { isGranted ->
-      logVerbose(tag, "isGranted: $isGranted")
-      hasCameraPermission = isGranted
-      if (!isGranted) handleErrorEvent("Camera permission denied")
-   }
+   var ask by remember { mutableStateOf(false) }
 
    if (hasCameraPermission) {
       onPermissionGranted()
@@ -67,8 +63,9 @@ fun CamCheckPermission(
 
       Button(
          onClick = {
-            logVerbose(tag, "onclick -> launcher.launch")
-            launcher.launch(Manifest.permission.CAMERA)
+            //logVerbose(tag, "onclick -> launcher.launch")
+            //launcher.launch(Manifest.permission.CAMERA)
+            ask = true
          },
          modifier = Modifier.fillMaxWidth()
       ) {
@@ -89,6 +86,22 @@ fun CamCheckPermission(
                style = MaterialTheme.typography.labelLarge
             )
          }
+      } // button
+      // When `ask` is true, run the helper to request the permission
+      if (ask) {
+         RequireCamera(
+            onGranted = {
+               ask = false
+               hasCameraPermission = true
+            },
+            onDenied = { permanently ->
+               ask = false
+               handleErrorEvent(
+                  if (permanently) "Camera permission permanently denied"
+                  else "Camera permission denied"
+               )
+            }
+         )
       }
    }
 }

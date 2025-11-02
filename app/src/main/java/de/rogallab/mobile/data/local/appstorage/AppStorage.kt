@@ -20,28 +20,30 @@ import java.io.IOException
 
 class AppStorage(
    private val _context: Context,
-   private val _ioDispatcher: CoroutineDispatcher
+   private val _dispatcher: CoroutineDispatcher
 ) : IAppStorage {
 
    // Convert a drawable resource to an image file in app's private storage
    override suspend fun convertDrawableToAppStorage(
-      context: Context,
       drawableId: Int,
       pathName: String,
       uuidString: String?
    ): Uri? = withContext(Dispatchers.IO) {
+
+      var bitmap: Bitmap? = null
+
       try {
-         var uuidStringLocal = uuidString
-         if(uuidStringLocal.isNullOrBlank()) uuidStringLocal = newUuid()
+         var uuidLocal = if(uuidString.isNullOrBlank()) newUuid() else uuidString
 
          // Load bitmap from drawable resource
-         val resources = context.resources
-         val bitmap = BitmapFactory.decodeResource(resources, drawableId)
+         bitmap = BitmapFactory.decodeResource(_context.resources, drawableId)
             ?: throw IllegalArgumentException("Failed to decode drawable resource: $drawableId")
 
+         // Prepare destination directory and file
+         val imagesDir = File(_context.filesDir, pathName).apply { if (!exists()) mkdirs() }
+         val imageFile = File(imagesDir, "$uuidLocal.jpg")
+
          // Save bitmap to app's private files directory
-         val imagesDir = File(context.filesDir, "images/$pathName").apply { if (!exists()) mkdirs() }
-         val imageFile = File(imagesDir, "$uuidStringLocal.jpg")
          FileOutputStream(imageFile).use { out ->
             bitmap.compress(Bitmap.CompressFormat.JPEG, 90, out)
          }
@@ -49,14 +51,38 @@ class AppStorage(
       } catch (e: Exception) {
          throw IoException("Failed to convert drawable to app storage: ${e.message}")
       } finally {
-         // Note: bitmap might be null if decodeResource failed, so check before recycling
-         val bitmap = BitmapFactory.decodeResource(context.resources, drawableId)
          bitmap?.recycle()
       }
    }
 
+
+   // Copy image from Image Uri to app's private storage
+   override suspend fun convertImageUriToAppStorage(
+      sourceUri: Uri,
+      pathName: String   // images/people41
+   ): Uri? = withContext(_dispatcher) {
+      try {
+         // Create destination file with unique name
+         val dir = File(_context.filesDir, pathName).apply { if (!exists()) mkdirs() }
+         val destinationFile = File(dir, "IMG_${System.currentTimeMillis()}.jpg")
+
+         // Copy from Image URI to app storage
+         _context.contentResolver.openInputStream(sourceUri)?.use { inputStream ->
+            FileOutputStream(destinationFile).use { outputStream ->
+               inputStream.copyTo(outputStream)
+            }
+         } ?: throw IllegalStateException("Cannot open source URI: $sourceUri")
+
+         // Return file URI
+         return@withContext Uri.fromFile(destinationFile)
+      } catch (e: Exception) {
+         throw IllegalStateException("Failed to copy from image Uri to app storage", e)
+      }
+   }
+   
+   
    // Load bitmap from any URI (MediaStore, file URI, content URI)
-   override suspend fun loadImageFromAppStorage(uri: Uri): Bitmap? = withContext(_ioDispatcher) {
+   override suspend fun loadImageFromAppStorage(uri: Uri): Bitmap? = withContext(_dispatcher) {
       try {
          if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             val source = ImageDecoder.createSource(_context.contentResolver, uri) // Fix: _context
@@ -74,7 +100,7 @@ class AppStorage(
 
    override suspend fun deleteImageOnAppStorage(
       pathName:String
-   ): Unit = withContext(_ioDispatcher) {
+   ): Unit = withContext(_dispatcher) {
       try {
          // pathName for the image file
          File(pathName).apply {

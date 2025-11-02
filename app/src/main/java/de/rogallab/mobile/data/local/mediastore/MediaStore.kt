@@ -10,18 +10,18 @@ import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
 import de.rogallab.mobile.Globals.MEDIA_STORE_GROUP_NAME
+import de.rogallab.mobile.domain.IAppStorage
 import de.rogallab.mobile.domain.IMediaStore
 import de.rogallab.mobile.domain.exceptions.IoException
 import de.rogallab.mobile.domain.utilities.logDebug
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.io.File
-import java.io.FileOutputStream
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.UUID
+import kotlin.text.compareTo
 
 class MediaStore(
    private val _context: Context,
@@ -108,57 +108,54 @@ class MediaStore(
       groupName: String,
       sourceUri: Uri
    ): Uri? = withContext(_ioDispatcher) { // heavy io operation
+
+      var bitmap: Bitmap? = null
+      var uriMediaStore: Uri? = null
+
       try {
          val actualGroupName = groupName.ifBlank { MEDIA_STORE_GROUP_NAME }
          logDebug(TAG, "saveImageToMediaStore: groupName=$actualGroupName, sourceUri=$sourceUri")
 
          // Load bitmap from source URI
-         val bitmap = loadBitmap(sourceUri)
-         if (bitmap == null) return@withContext null
+         bitmap = loadBitmap(sourceUri) ?: return@withContext null
 
-         // Create content values for MediaStore
+         // Prepare content values for new image
          val fileName = "${UUID.randomUUID()}.jpg"
-         val imageContentValues = ContentValues().apply {
+         val contentValues = ContentValues().apply {
             put(MediaStore.Images.Media.DISPLAY_NAME, fileName)
             put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
-            put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/$actualGroupName")
-            // Mark as pending during write operation
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+               put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/$actualGroupName")
                put(MediaStore.Images.Media.IS_PENDING, 1)
             }
          }
 
-         // Insert into MediaStore to get URI
-         val uriMediaStore = _context.contentResolver.insert(
+         // Insert new image into MediaStore
+         uriMediaStore = _context.contentResolver.insert(
             MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-            imageContentValues
-         )
-         logDebug(TAG, "uriMediaStore: $uriMediaStore")
-         if (uriMediaStore == null) return@withContext null
+            contentValues
+         ) ?: return@withContext null
 
-         try {
-            _context.contentResolver.openOutputStream(uriMediaStore)?.use { outputStream ->
-               bitmap.compress(Bitmap.CompressFormat.JPEG, 90, outputStream)
+         // Write bitmap data to MediaStore
+         _context.contentResolver.openOutputStream(uriMediaStore)?.use { out ->
+            if (!bitmap.compress(Bitmap.CompressFormat.JPEG, 90, out)) {
+               throw IllegalStateException("Failed to compress bitmap")
             }
-            // Mark as no longer pending
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-               imageContentValues.clear()
-               imageContentValues.put(MediaStore.Images.Media.IS_PENDING, 0)
-               _context.contentResolver.update(uriMediaStore, imageContentValues, null, null)
-            }
+         } ?: throw IllegalStateException("Cannot open output stream for URI: $uriMediaStore")
 
-            bitmap.recycle()
-            return@withContext uriMediaStore
-
-         } catch (e: Exception) {
-            // Clean up on failure
-            _context.contentResolver.delete(uriMediaStore, null, null)
-            throw e
+         // Mark image as not pending (available) for Android Q and above
+         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            val done = ContentValues().apply { put(MediaStore.Images.Media.IS_PENDING, 0) }
+            _context.contentResolver.update(uriMediaStore, done, null, null)
          }
 
+         return@withContext uriMediaStore
       } catch (e: Exception) {
+         uriMediaStore?.let { _context.contentResolver.delete(it, null, null) }
          e.printStackTrace()
          return@withContext null
+      } finally {
+         bitmap?.recycle()
       }
    }
 
@@ -166,66 +163,56 @@ class MediaStore(
    // External Pictures: /storage/emulated/0/Pictures/[your_app_folder]/
    override suspend fun convertDrawableToMediaStore(
       drawableId: Int,
-      groupName: String
+      groupName: String,
+      uuidString: String?
    ): Uri? = withContext(_ioDispatcher) {
+
+      var bitmap: Bitmap? = null
+
       try {
          // Create URI for new image in MediaStore
-         val imageUri = createGroupedImageUri(groupName, null)
-         if (imageUri == null) return@withContext null
+         val imageUri = createGroupedImageUri(groupName, uuidString) ?: return@withContext null
 
          // Get drawable resource
          val drawable = _context.getDrawable(drawableId)
             ?: throw IllegalArgumentException("Drawable not found: $drawableId")
 
-         // Convert drawable to bitmap and write to MediaStore
-         _context.contentResolver.openOutputStream(imageUri)?.use { outputStream ->
-            val bitmap = Bitmap.createBitmap(
-               drawable.intrinsicWidth,
-               drawable.intrinsicHeight,
-               Bitmap.Config.ARGB_8888
-            )
-            val canvas = Canvas(bitmap)
+         // Convert drawable to bitmap
+         val width = drawable.intrinsicWidth.takeIf { it > 0 } ?: 1
+         val height = drawable.intrinsicHeight.takeIf { it > 0 } ?: 1
+         bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+         Canvas(bitmap).also { canvas ->
             drawable.setBounds(0, 0, canvas.width, canvas.height)
             drawable.draw(canvas)
+         }
 
-            // Compress and save as JPEG
-            bitmap.compress(Bitmap.CompressFormat.JPEG, 90, outputStream)
-            bitmap.recycle()
+         // Save bitmap to MediaStore  /storage/emulated/0/Pictures/<groupName>/<fileName>.jpg
+         _context.contentResolver.openOutputStream(imageUri)?.use { out ->
+            if(!bitmap.compress(Bitmap.CompressFormat.JPEG, 90, out)) {
+               throw IllegalStateException("Failed to compress bitmap")
+            }
          } ?: throw IllegalStateException("Cannot open output stream for URI: $imageUri")
+
          return@withContext imageUri
 
       } catch (e: Exception) {
-         throw IoException("Failed to convert drawable to MediaStore ${e.message}")
+         throw IoException("Failed to convert drawable to MediaStore: ${e.message}")
+      } finally {
+         bitmap?.recycle()
       }
    }
 
    // Copy image from MediaStore to app's private storage
    override suspend fun convertMediaStoreToAppStorage(
       sourceUri: Uri,
-      groupName: String
+      groupName: String,
+      appStorage: IAppStorage
    ): Uri? = withContext(_ioDispatcher) {
       try {
-         // Create filename
-         val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
-         val filename = "IMG_$timestamp.jpg"
-
-         // Create destination in app's private files directory
-         val destinationFile = File(_context.filesDir, "images/$groupName").apply {
-            if (!exists()) mkdirs()
-         }.let { dir ->
-            File(dir, filename)
-         }
-
-         // Copy from MediaStore URI to app storage
-         _context.contentResolver.openInputStream(sourceUri)?.use { inputStream ->
-            FileOutputStream(destinationFile).use { outputStream ->
-               inputStream.copyTo(outputStream)
-            }
-         } ?: throw IllegalStateException("Cannot open source URI: $sourceUri")
-
-         // Return file URI
-         return@withContext Uri.fromFile(destinationFile)
-
+         return@withContext appStorage.convertImageUriToAppStorage(
+            sourceUri = sourceUri,
+            pathName = "images/$groupName"
+         )
       } catch (e: Exception) {
          throw IllegalStateException("Failed to copy image from MediaStore to app storage", e)
       }

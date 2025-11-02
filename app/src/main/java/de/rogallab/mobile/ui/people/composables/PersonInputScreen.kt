@@ -36,10 +36,11 @@ fun PersonInputScreen(
    val nComp = remember { mutableIntStateOf(1) }
    SideEffect { logComp(tag, "Composition #${nComp.value++}") }
 
-   val groupName = Globals.FILE_NAME.split(".").first()
+   val groupName = Globals.file_name.split(".").first()
 
    // observe PersonUiStateFlow
-   val personUiState: PersonUiState = CollectBy(viewModel.personUiStateFlow, tag)
+   val personUiState: PersonUiState =
+      CollectBy(viewModel.personUiStateFlow, tag)
 
    val snackbarHostState = remember { SnackbarHostState() }
 

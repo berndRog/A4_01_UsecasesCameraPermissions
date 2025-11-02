@@ -4,8 +4,8 @@ object Globals {
    const val APP_NAME = "A4_01_CameraPermissions"
    const val MEDIA_STORE_GROUP_NAME = "Photos CameraPermissions"
 
-   const val DIRECTORY_NAME = "android"
-   const val FILE_NAME = "people41.json"
+   const val directory_name = "android"
+   const val file_name = "people41.json"
 
    const val ANIMATION_DURATION = 500
    const val SNACKBAR_DURATION = 4000
@@ -14,5 +14,5 @@ object Globals {
    var isDebug = true
    var isInfo = true
    var isVerbose = true
-   var isComposition = true
+   var isComp = true
 }

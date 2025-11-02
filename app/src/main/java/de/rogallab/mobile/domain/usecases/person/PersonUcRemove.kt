@@ -6,6 +6,6 @@ import de.rogallab.mobile.domain.entities.Person
 class PersonUcRemove(
    private val _repository: IPersonRepository
 ) {
-    operator fun invoke(person: Person): Result<Unit> =
-       _repository.update(person)
+    suspend operator fun invoke(person: Person): Result<Unit> =
+       _repository.remove(person)
 }

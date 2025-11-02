@@ -35,7 +35,7 @@ import java.io.File
 @Composable
 fun CamCapturePhoto(
    onCaptureImage: (String) -> Unit,   // Event ↑
-   onErrorEvent: (String?) -> Unit = {} // Event ↑
+   onError: (String?) -> Unit = {}     // Event ↑
 ) {
    val tag = "<-CamCapturePhoto"
    val nComp = remember { mutableIntStateOf(1) }
@@ -54,7 +54,7 @@ fun CamCapturePhoto(
             onCaptureImage(uri.toString())
          }
       } else {
-         onErrorEvent("Camera capture failed or was cancelled")
+         onError("Camera capture failed or was cancelled")
       }
    }
 
@@ -66,7 +66,7 @@ fun CamCapturePhoto(
          val photoFile = File.createTempFile(
             "photo_${System.currentTimeMillis()}",
             ".jpg",
-            context.cacheDir
+            context.cacheDir  // internal temporary storage
          )
          imageUri = FileProvider.getUriForFile(
             context,

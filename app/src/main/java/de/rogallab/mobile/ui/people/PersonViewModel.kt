@@ -1,7 +1,8 @@
 package de.rogallab.mobile.ui.people
 
 import androidx.compose.material3.SnackbarDuration
-import de.rogallab.mobile.domain.IPeopleUcFetch
+import androidx.lifecycle.viewModelScope
+import de.rogallab.mobile.domain.IPeopleUcFetchSorted
 import de.rogallab.mobile.domain.IPersonUseCases
 import de.rogallab.mobile.domain.entities.Person
 import de.rogallab.mobile.domain.utilities.logDebug
@@ -10,18 +11,19 @@ import de.rogallab.mobile.ui.base.BaseViewModel
 import de.rogallab.mobile.ui.base.updateState
 import de.rogallab.mobile.ui.navigation.INavHandler
 import de.rogallab.mobile.ui.navigation.PeopleList
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.launch
 
 class PersonViewModel(
-   private val _fetchSorted: IPeopleUcFetch,
+   private val _fetchSorted: IPeopleUcFetchSorted,
    private val _personUc: IPersonUseCases,
    navHandler: INavHandler,
    private val _validator: PersonValidator
-): BaseViewModel(navHandler, TAG) {
+) : BaseViewModel(navHandler, TAG) {
 
-   init { logDebug(TAG, "init instance=${System.identityHashCode(this)}") }
+   init {
+      logDebug(TAG, "init instance=${System.identityHashCode(this)}")
+   }
 
    // region StateFlows and Intent handlers --------------------------------------------------------
    // StateFlow for PeopleListScreen ---------------------------------------------------------------
@@ -71,18 +73,22 @@ class PersonViewModel(
       updateState(_personUiStateFlow) {
          copy(person = person.copy(firstName = firstName.trim()))
       }
+
    private fun onLastNameChange(lastName: String) =
       updateState(_personUiStateFlow) {
          copy(person = person.copy(lastName = lastName.trim()))
       }
+
    private fun onEmailChange(email: String?) =
       updateState(_personUiStateFlow) {
          copy(person = person.copy(email = email?.trim()))
       }
+
    private fun onPhoneChange(phone: String?) =
       updateState(_personUiStateFlow) {
          copy(person = person.copy(phone = phone?.trim()))
       }
+
    private fun onImagePathChange(uriString: String?) =
       updateState(_personUiStateFlow) {
          copy(person = person.copy(imagePath = uriString?.trim()))
@@ -91,46 +97,43 @@ class PersonViewModel(
    // clear person state and prepare for new person input
    private fun clearState() =
       updateState(_personUiStateFlow) {
-         copy(person = Person(id = newUuid() ))
+         copy(person = Person(id = newUuid()))
       }
    // endregion
 
    // region Fetch by id (error → navigate back to list) -------------------------------------------
    private fun fetchById(id: String) {
       logDebug(TAG, "fetchById() $id")
-      _personUc.fetchById(id)
-         .onSuccess { person ->
-            logDebug(TAG, "fetchPersonById")
-            updateState(_personUiStateFlow) { copy(person = person) }
-         }
-         .onFailure { t ->
-            handleErrorEvent(t,  navKey = PeopleList)
-         }
-//      _repository.findById(id)
-//         .onSuccess { person -> ... }
-//         .onFailure { t -> ... }
+      viewModelScope.launch {
+         _personUc.fetchById(id)
+            .onSuccess { person ->
+               logDebug(TAG, "fetchPersonById")
+               updateState(_personUiStateFlow) { copy(person = person) }
+            }
+            .onFailure { t ->
+               handleErrorEvent(t, navKey = PeopleList)
+            }
+      }
    }
    // endregion
 
    // region Create/Update (persist then refresh list) --------------------------
    private fun create() {
       logDebug(TAG, "createPerson")
-      _personUc.create(_personUiStateFlow.value.person)
-         .onSuccess { fetch() } // reread all people
-         .onFailure { t -> handleErrorEvent(t) }
-//      _repository.create(_personUiStateFlow.value.person)
-//         .onSuccess { fetch() } // reread all people
-//         .onFailure { t -> handleErrorEvent(t) }
+      viewModelScope.launch {
+         _personUc.create(_personUiStateFlow.value.person)
+            .onSuccess { fetch() } // reread all people
+            .onFailure { t -> handleErrorEvent(t) }
+      }
    }
 
    private fun update() {
       logDebug(TAG, "updatePerson()")
-      _personUc.update(_personUiStateFlow.value.person)
-         .onSuccess { fetch() } // reread all people
-         .onFailure { t -> handleErrorEvent(t) }
-//      _repository.update(_personUiStateFlow.value.person)
-//         .onSuccess { fetch() } // reread all people
-//         .onFailure { t -> handleErrorEvent(t) }
+      viewModelScope.launch {
+         _personUc.update(_personUiStateFlow.value.person)
+            .onSuccess { fetch() } // reread all people
+            .onFailure { t -> handleErrorEvent(t) }
+      }
    }
    // endregion
 
@@ -164,10 +167,10 @@ class PersonViewModel(
 
       // Second step: Persistence in background
       // Remove person from repository
-      _personUc.remove(person)
-         .onFailure { t -> handleErrorEvent(t) }
-//      _repository.remove(person)
-//         .onFailure { t -> handleErrorEvent(t) }
+      viewModelScope.launch {
+         _personUc.remove(person)
+            .onFailure { t -> handleErrorEvent(t) }
+      }
    }
 
    /**
@@ -196,12 +199,10 @@ class PersonViewModel(
       }
 
       // Add person back to repository in background
-      _personUc.create(personToRestore)
-         .onFailure { t -> handleErrorEvent(t) }
-
-//      _repository.create(personToRestore)
-//         .onFailure { t -> handleErrorEvent(t) }
-
+      viewModelScope.launch {
+         _personUc.create(personToRestore)
+            .onFailure { t -> handleErrorEvent(t) }
+      }
       _removedPerson = null
       _removedPersonIndex = -1
    }
@@ -222,13 +223,13 @@ class PersonViewModel(
    fun validate(): Boolean {
       val person = _personUiStateFlow.value.person
       // only one error message can be processed at a time
-      if(!validateAndLogError(_validator.validateFirstName(person.firstName)))
+      if (!validateAndLogError(_validator.validateFirstName(person.firstName)))
          return false
-      if(!validateAndLogError(_validator.validateLastName(person.lastName)))
+      if (!validateAndLogError(_validator.validateLastName(person.lastName)))
          return false
-      if(!validateAndLogError(_validator.validateEmail(person.email)))
+      if (!validateAndLogError(_validator.validateEmail(person.email)))
          return false
-      if(!validateAndLogError(_validator.validatePhone(person.phone)))
+      if (!validateAndLogError(_validator.validatePhone(person.phone)))
          return false
       return true // all fields are valid
    }
@@ -253,21 +254,36 @@ class PersonViewModel(
    // read all people from repository
    private fun fetch() {
       logDebug(TAG, "fetch")
-      updateState(_peopleUiStateFlow) { copy(isLoading = true) }
 
-      //_repository.getAllSortedBy { it.firstName }
-      _fetchSorted{ it.firstName }
-         .onSuccess { people ->
-            val snapshot = people.toList()
-            updateState(_peopleUiStateFlow) {
-               logDebug(TAG, "apply PeopleUiState: isLoading=false size=${snapshot.size}")
-               copy(
-                  isLoading = false,
-                  people = snapshot //new instance of a list
-               )
+      viewModelScope.launch {
+         _fetchSorted { it.firstName }
+            // consume isLoading state
+            .onStart {
+               updateState(_peopleUiStateFlow) { copy(isLoading = true) }
             }
-         }
-         .onFailure { t -> handleErrorEvent(t) }
+            .catch { t ->
+               updateState(_peopleUiStateFlow) { copy(isLoading = false) }
+               handleErrorEvent(t)
+            }
+            .collectLatest { result ->
+               result
+                  // consume people list
+                  .onSuccess { people ->
+                     val snapshot = people.toList()
+                     updateState(_peopleUiStateFlow) {
+                        logDebug(TAG, "PeopleUiState: isLoading=false size=${snapshot.size}")
+                        copy(
+                           isLoading = false,
+                           people = snapshot
+                        )
+                     }
+                  }
+                  .onFailure { t ->
+                     updateState(_peopleUiStateFlow) { copy(isLoading = false) }
+                     handleErrorEvent(t)
+                  }
+            }
+      } // end launch
    }
    // endregion
 

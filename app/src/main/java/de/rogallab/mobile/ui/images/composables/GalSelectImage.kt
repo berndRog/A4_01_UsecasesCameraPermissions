@@ -29,7 +29,8 @@ import de.rogallab.mobile.domain.utilities.logVerbose
 
 @Composable
 fun GalSelectImage(
-   onSelectImage: (String) -> Unit // Event ↑
+   onSelectImage: (String) -> Unit, // Event ↑
+   onError: (String?) -> Unit = {}  // Event ↑
 ) {
    val tag = "<-GalSelectImage"
    val nComp = remember { mutableIntStateOf(1) }
@@ -39,8 +40,10 @@ fun GalSelectImage(
    val launcher = rememberLauncherForActivityResult(
       contract = ActivityResultContracts.GetContent()
    ) { uri: Uri? ->
-      uri?.let { selectedUri ->
-         onSelectImage(selectedUri.toString()) // Just pass the URI string to ViewModel
+      if (uri == null) {
+         onError("Auswahl aus Fotogalerie abgebrochen")
+      } else  {
+         onSelectImage(uri.toString()) // Just pass the URI string to ViewModel
       }
    }
 

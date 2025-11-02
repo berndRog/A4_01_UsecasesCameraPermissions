@@ -3,72 +3,42 @@ package de.rogallab.mobile.data.repositories
 import de.rogallab.mobile.data.IDataStore
 import de.rogallab.mobile.domain.IPersonRepository
 import de.rogallab.mobile.domain.entities.Person
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.map
+import kotlin.text.insert
 
 class PersonRepository(
    private val _dataStore: IDataStore
 ) : IPersonRepository {
-   override fun getAll(): Result<List<Person>> =
-      try {
-         Result.success(_dataStore.selectAll())
-      } catch (e: Exception) {
-         Result.failure(e)
-      }
+   override fun getAll(): Flow<Result<List<Person>>> =
+      _dataStore.selectAll()
+         .map { Result.success(it) }
+         .catch { e -> emit(Result.failure(e)) }
 
-   override fun getAllSortedBy(
-      selector: (Person) -> String?
-   ): Result<List<Person>> =
-      try {
-         Result.success(_dataStore.selectAllSortedBy(selector))
-      } catch (e: Throwable) {
-         Result.failure(e)
-      }
+   override fun getAllSortedBy(selector: (Person) -> String?): Flow<Result<List<Person>>> =
+      _dataStore.selectAllSortedBy(selector)
+         .map { Result.success(it) }
+         .catch { e -> emit(Result.failure(e)) }
 
-   override fun getWhere(
-      predicate: (Person) -> Boolean
-   ): Result<List<Person>> =
-      try {
-         Result.success(_dataStore.selectWhere(predicate))
-      } catch (e: Throwable) {
-         Result.failure(e)
-      }
+   override fun getWhere(predicate: (Person) -> Boolean): Flow<Result<List<Person>>> =
+      _dataStore.selectWhere(predicate)
+         .map { Result.success(it) }
+         .catch { e -> emit(Result.failure(e)) }
 
-   override fun findById(id: String): Result<Person?> =
-      try {
-         Result.success(_dataStore.findById(id))
-      } catch (e: Exception) {
-         Result.failure(e)
-      }
+   override suspend fun findById(id: String): Result<Person?> =
+      runCatching { _dataStore.findById(id)  }
 
-   override fun findBy(
-      predicate: (Person) -> Boolean
-   ): Result<Person?> =
-      try {
-         Result.success(_dataStore.findBy(predicate))
-      } catch (e: Exception) {
-         Result.failure(e)
-      }
+   override suspend fun findBy(predicate: (Person) -> Boolean): Result<Person?> =
+      runCatching { _dataStore.findBy(predicate)  }
 
-   override fun create(person: Person): Result<Unit> =
-      try {
-         _dataStore.insert(person)
-         Result.success(Unit)
-      } catch (e: Exception) {
-         Result.failure(e)
-      }
+   override suspend fun create(person: Person): Result<Unit> =
+      runCatching { _dataStore.insert(person) }
 
-   override fun update(person: Person): Result<Unit> =
-      try {
-         _dataStore.update(person)
-         Result.success(Unit)
-      } catch (e: Exception) {
-         Result.failure(e)
-      }
+   override suspend fun update(person: Person): Result<Unit> =
+      runCatching { _dataStore.update(person) }
 
-   override fun remove(person: Person): Result<Unit> =
-      try {
-         _dataStore.delete(person)
-         Result.success(Unit)
-      } catch (e: Exception) {
-         Result.failure(e)
-      }
+   override suspend fun remove(person: Person): Result<Unit> =
+      runCatching { _dataStore.delete(person) }
+
 }

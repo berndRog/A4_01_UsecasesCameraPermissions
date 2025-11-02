@@ -1,184 +1,213 @@
 package de.rogallab.mobile.data.local.datastore
 
 import android.content.Context
-import de.rogallab.mobile.Globals.DIRECTORY_NAME
-import de.rogallab.mobile.Globals.FILE_NAME
+import de.rogallab.mobile.Globals
 import de.rogallab.mobile.data.IDataStore
 import de.rogallab.mobile.data.local.Seed
-import de.rogallab.mobile.domain.IAppStorage
 import de.rogallab.mobile.domain.entities.Person
 import de.rogallab.mobile.domain.utilities.logDebug
 import de.rogallab.mobile.domain.utilities.logError
 import de.rogallab.mobile.domain.utilities.logVerbose
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import java.io.File
+import java.io.IOException
+import java.nio.file.Files
+import java.nio.file.Path
+import java.nio.file.Paths
 
 class DataStore(
+   directoryName: String? = null,
+   fileName: String? = null,
    private val _context: Context,
-   private val _appStorage: IAppStorage,
-   directoryName: String?,
-   fileName: String?,
-   private val _isTest: Boolean = false
+   private val _seed: Seed,
+   private val _dispatcher: CoroutineDispatcher = Dispatchers.IO
 ) : IDataStore {
 
    // directory and file name for the dataStore from MainApplication
-   // get the Apps home directory
-   private val _appHome:String = _context.filesDir.toString()
+   private val _appHome: String = _context.filesDir.toString()
+   private var _directoryName = directoryName ?: Globals.directory_name
+   private val _fileName = fileName ?: Globals.file_name
 
-   val filePath = getOrCreateFilePath(
-      appHome =  _appHome,
-      directoryName = directoryName ?: DIRECTORY_NAME,
-      fileName = fileName ?: FILE_NAME
+   override val filePath: Path = getOrCreateFilePath(
+      appHome = _appHome,
+      directoryName = _directoryName,
+      fileName = _fileName
    )
 
-   // mutable set of people internal
-   private var _people: MutableSet<Person> = mutableSetOf()
-   // immutable list of people external
-   val people: List<Person>
-      get() = _people.toList()
+   // Coroutine-safe locking
+   private val mutex = Mutex()
 
-   // Json serializer
-   private val _json = Json {
+   // Reactive in-memory state
+   private val _peopleFlow = MutableStateFlow<List<Person>>(emptyList())
+   val peopleFlow: StateFlow<List<Person>> = _peopleFlow.asStateFlow()
+
+   // JSON serializer
+   private val _jsonSettings = Json {
       prettyPrint = true
       ignoreUnknownKeys = true
    }
 
-   override fun initialize() {
+   // Initialize: load from file or seed
+   override suspend fun initialize() {
       logDebug(TAG, "init: read datastore")
-      _people.clear()
+      mutex.withLock {
+         val exists = Files.exists(filePath)
+         val size = if (exists) runCatching { Files.size(filePath) }.getOrElse { 0L } else 0L
 
-      // /users/home/documents/android/peoplek08.json
-      var file = File(filePath)
-      if (!file.exists() || file.readText().isBlank()) {
-         // seed _people with some data
-         val seed = Seed(_context, _appStorage, _isTest)
-         _people.addAll(seed.people)
-         logVerbose(TAG, "create(): seedData ${_people.size} people")
-         write()
+         if (!exists || size == 0L) {
+            _seed?.let { seed ->
+               logVerbose(TAG, "create(): seedData ${seed.people.size} people")
+               writeInternal(seed.people)
+            } ?: run {
+               // no seed provided → start with empty file
+               writeInternal(emptyList())
+            }
+         }
+         _peopleFlow.value = readInternal()
       }
-      // read people from JSON file
-      read()
    }
 
-   override fun selectAll(): List<Person> =
-      _people.toList()
+   // Reactive selects
+   override fun selectAll(): Flow<List<Person>> =
+      peopleFlow
 
-   // sort case-insensitive by selector
-   override fun selectAllSortedBy(selector: (Person) -> String?): List<Person> =
-      _people.sortedBy { person -> selector(person)?.lowercase() }
-         .toList()
+   override fun selectAllSortedBy(selector: (Person) -> String?): Flow<List<Person>> =
+      peopleFlow
+         .map { list -> list.sortedBy { selector(it)?.lowercase() } }
+         .distinctUntilChanged()
 
-   override fun selectWhere(predicate: (Person) -> Boolean): List<Person> =
-      _people.filter(predicate)
-         .toList()
+   override fun selectWhere(predicate: (Person) -> Boolean): Flow<List<Person>> =
+      peopleFlow
+         .map { list -> list.filter(predicate) }
+         .distinctUntilChanged()
 
-   override fun findById(id: String): Person? =
-      _people.firstOrNull { it: Person -> it.id == id }
+   // one shot read
+   override suspend fun findById(id: String): Person? =
+      peopleFlow.value
+         .firstOrNull { it.id == id }
 
-   override fun findBy(predicate: (Person) -> Boolean): Person? =
-      _people.firstOrNull(predicate)
+   override suspend fun findBy(predicate: (Person) -> Boolean): Person? =
+      peopleFlow.value
+         .firstOrNull(predicate)
 
-   override fun insert(person: Person) {
-      logVerbose(TAG, "insert: $person")
-      if (_people.any { it.id == person.id }) return
-      // throw IllegalArgumentException("Person with id ${person.id} already exists")
-      _people.add(person)
-      write()
+   // one show write
+   override suspend fun insert(person: Person) {
+      mutex.withLock {
+         val current = _peopleFlow.value
+         if (current.any { it.id == person.id }) return
+         val updated = current + person
+         writeInternal(updated)
+         _peopleFlow.value = updated
+         logVerbose(TAG, "insert: $person")
+      }
    }
 
-   override fun update(person: Person) {
-      logVerbose(TAG, "update: $person")
-      val existing = _people.firstOrNull { it.id == person.id }
-      if (existing == null)
-         throw IllegalArgumentException("Person with id ${person.id} does not exist")
-      _people.remove(existing)
-      _people.add(person)
-      write()
+   override suspend fun update(person: Person) {
+      mutex.withLock {
+         val current = _peopleFlow.value
+         require(current.any { it.id == person.id }) {
+            "Person with id ${person.id} does not exist"
+         }
+         val updated = current.map { if (it.id == person.id) person else it }
+         writeInternal(updated)
+         _peopleFlow.value = updated
+         logVerbose(TAG, "update: $person")
+      }
    }
 
-   override fun delete(person: Person) {
-      logVerbose(TAG, "delete: $person")
-      if (_people.none { it.id == person.id })
-         throw IllegalArgumentException("Person with id ${person.id} does not exist")
-      _people.remove(person)
-      write()
+   override suspend fun delete(person: Person) {
+      mutex.withLock {
+         val current = _peopleFlow.value
+         require(current.any { it.id == person.id }) {
+            "Person with id ${person.id} does not exist"
+         }
+         val updated = current.filterNot { it.id == person.id }
+         writeInternal(updated)
+         _peopleFlow.value = updated
+         logVerbose(TAG, "delete: $person")
+      }
    }
 
-   // list of people is saved as JSON file to the user's home directory
-   private fun read() {
+   // ---------- Internal I/O (always on IO dispatcher) ----------
+   private suspend fun readInternal(): List<Person> = withContext(_dispatcher) {
       try {
-         // val filePath = getOrCreateFilePath(_appHome, directoryName, fileName)
-         // read json from a file and convert to a list of people
-         val jsonString = File(filePath).readText()
-         logVerbose(TAG, jsonString)
-         _people = _json.decodeFromString<MutableSet<Person>>(jsonString)
-         logDebug(TAG, "read(): decode JSON ${_people.size} Ppeople")
-      } catch (e: Exception) {
+         val jsonString = try {
+            File(filePath.toString()).readText()
+         }
+         catch (e: IOException) {
+            logError(TAG, "Failed to read file: ${e.message}")
+            throw e
+         }
+
+         if (jsonString.isBlank()) {
+            logDebug(TAG, "read(): empty file → 0 people")
+            emptyList()
+         } else {
+            logVerbose(TAG, jsonString)
+            val people: List<Person> = _jsonSettings.decodeFromString(jsonString)
+            logDebug(TAG, "read(): decode JSON ${people.size} people")
+            people
+         }
+      }
+      catch (e: Exception) {
          logError(TAG, "Failed to read: ${e.message}")
          throw e
       }
    }
 
-   // write the list of people to the dataStore as JSON file
-   private fun write() {
+   private suspend fun writeInternal(people: List<Person>) = withContext(_dispatcher) {
       try {
-         // val filePath = getOrCreateFilePath(_appHome, directoryName, fileName)
-         val jsonString = _json.encodeToString(_people)
-         logDebug(TAG, "write(): encode JSON ${_people.size} people")
-         // save to a file
-         File(filePath).writeText(jsonString)
+         val jsonString = _jsonSettings.encodeToString(people)
+         logDebug(TAG, "write(): encode JSON ${people.size} people")
+
+         // Ensure directory exists
+         val dir = File(filePath.parent.toString())
+         if (!dir.exists()) dir.mkdirs()
+
+         // Atomic write via temp file
+         val targetFile = File(filePath.toString())
+         val tmpFile = File(targetFile.parent, "${targetFile.name}.tmp")
+         tmpFile.writeText(jsonString)
+
+         if (!tmpFile.renameTo(targetFile)) {
+            tmpFile.copyTo(targetFile, overwrite = true)
+            tmpFile.delete()
+         }
          logVerbose(TAG, jsonString)
-      } catch (e: Exception) {
+      }
+      catch (e: Exception) {
          logError(TAG, "Failed to write: ${e.message}")
          throw e
       }
    }
 
    companion object {
+      private const val TAG = "<-DataStore>"
 
-      private const val TAG = "<-DataStore"
-
-      // get the file path for the dataStore
-      // UserHome/documents/android/people.json
+      // Build (and ensure) platform-friendly path like:
+      // <UserHome>/Documents/<directoryName>/<fileName>
       fun getOrCreateFilePath(
          appHome: String,
          directoryName: String,
          fileName: String
-      ): String {
+      ): Path {
          try {
-            // the directory must exist, if not create it
-            val directoryPath = "$appHome/documents/$directoryName"
-            if (!directoryExists(directoryPath)) {
-               val result = createDirectory(directoryPath)
-               if (!result) {
-                  throw Exception("Failed to create directory: $directoryPath")
-               }
-            }
-
-            // create the file path
-            val filePath = "$directoryPath/$fileName"
-            // create the file if it doesn't exist
-            val file = File(filePath)
-            if (!file.exists()) {
-               file.createNewFile()
-               logDebug(TAG, "Created new file: $filePath")
-            }
-            // return the file path
-            return filePath
-         } catch (e: Exception) {
-            logError(TAG, "Failed to getFilePath or create directory; ${e.message}")
+            val dir: Path = Paths.get(appHome)
+               .resolve("Documents")
+               .resolve(directoryName)
+            Files.createDirectories(dir)
+            return dir.resolve(fileName)
+         }
+         catch (e: Exception) {
+            logError(TAG, "Failed to create directory or build path: ${e.message}")
             throw e
          }
-      }
-
-      private fun directoryExists(directoryPath: String): Boolean {
-         val directory = File(directoryPath)
-         return directory.exists() && directory.isDirectory
-      }
-
-      private fun createDirectory(directoryPath: String): Boolean {
-         val directory = File(directoryPath)
-         return directory.mkdirs()
       }
    }
 }

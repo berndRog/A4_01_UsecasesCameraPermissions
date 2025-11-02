@@ -26,13 +26,15 @@ interface IMediaStore {
    // Convert a drawable resource to the media store under a specific group
    suspend fun convertDrawableToMediaStore(
       drawableId: Int,
-      groupName: String
+      groupName: String,
+      uuidString: String?
    ): Uri?
 
    // Copies an image from the media store to the app's storage
    suspend fun convertMediaStoreToAppStorage(
       sourceUri: Uri,
-      groupName: String
+      groupName: String,
+      appStorage: IAppStorage
    ): Uri?
 
    suspend fun loadBitmap(

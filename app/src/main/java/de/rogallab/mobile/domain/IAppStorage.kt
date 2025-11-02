@@ -8,11 +8,18 @@ interface IAppStorage {
 
    // Converts a drawable resource to an image file  the app's storage
    suspend fun convertDrawableToAppStorage(
-      context: Context,
       drawableId: Int,
       pathName: String,  // images/people31
       uuidString: String?
    ): Uri?
+
+
+   // Copies an image from the media store to the app's storage
+   suspend fun convertImageUriToAppStorage(
+      sourceUri: Uri,
+      pathName: String
+   ): Uri?
+
 
    suspend fun loadImageFromAppStorage(uri: Uri): Bitmap?
 

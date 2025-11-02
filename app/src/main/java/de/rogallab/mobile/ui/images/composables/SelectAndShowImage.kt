@@ -54,15 +54,16 @@ fun SelectAndShowImage(
          verticalArrangement = Arrangement.spacedBy(8.dp),
       ) {
          GalSelectImage(
-            onSelectImage = onSelectImage
+            onSelectImage = onSelectImage,
+            onError = handleError
          )
 
-         CamCheckPermission(
+         CamReqPermission(
             handleErrorEvent = handleError,
             onPermissionGranted = {
                CamCapturePhoto(
                   onCaptureImage = onCaptureImage,
-                  onErrorEvent = handleError
+                  onError = handleError
                )
             }
          )

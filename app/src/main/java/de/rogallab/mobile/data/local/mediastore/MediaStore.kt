@@ -9,7 +9,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
-import de.rogallab.mobile.Globals.MEDIA_STORE_GROUP_NAME
+import de.rogallab.mobile.Globals
 import de.rogallab.mobile.domain.IAppStorage
 import de.rogallab.mobile.domain.IMediaStore
 import de.rogallab.mobile.domain.exceptions.IoException
@@ -21,7 +21,6 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.UUID
-import kotlin.text.compareTo
 
 class MediaStore(
    private val _context: Context,
@@ -42,7 +41,7 @@ class MediaStore(
       filename: String?
    ): Uri? {
       return try {
-         val actualGroupName = groupName.ifBlank { MEDIA_STORE_GROUP_NAME }
+         val actualGroupName = groupName.ifBlank { Globals.mediaStoreGroupname }
          val name = filename ?: UUID.randomUUID().toString()
          logDebug(TAG, "createGroupedImageUri: groupName=$actualGroupName, name=$name")
 
@@ -74,7 +73,7 @@ class MediaStore(
       groupName: String
    ): Int =
       try {
-         val actualGroupName = groupName.ifBlank { MEDIA_STORE_GROUP_NAME }
+         val actualGroupName = groupName.ifBlank { Globals.mediaStoreGroupname }
 
          if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             val selection = "${MediaStore.Images.Media.RELATIVE_PATH} LIKE ?"
@@ -98,7 +97,7 @@ class MediaStore(
             )
          }
       } catch (e: Exception) {
-         val actualGroupName = groupName.ifBlank { MEDIA_STORE_GROUP_NAME }
+         val actualGroupName = groupName.ifBlank { Globals.mediaStoreGroupname }
          throw IoException("Failed to delete image group: $actualGroupName: ${e.message}")
       }
 
@@ -113,7 +112,7 @@ class MediaStore(
       var uriMediaStore: Uri? = null
 
       try {
-         val actualGroupName = groupName.ifBlank { MEDIA_STORE_GROUP_NAME }
+         val actualGroupName = groupName.ifBlank { Globals.mediaStoreGroupname }
          logDebug(TAG, "saveImageToMediaStore: groupName=$actualGroupName, sourceUri=$sourceUri")
 
          // Load bitmap from source URI

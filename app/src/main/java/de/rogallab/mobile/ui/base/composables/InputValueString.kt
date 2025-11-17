@@ -19,6 +19,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalFocusManager
@@ -26,6 +27,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import de.rogallab.mobile.domain.utilities.logComp
 import de.rogallab.mobile.domain.utilities.logDebug
+import de.rogallab.mobile.ui.base.sanitizeDigit
 
 @Composable
 fun InputValueString(
@@ -34,6 +36,7 @@ fun InputValueString(
    label: String,
    leadingIcon: ImageVector? = null,
    validate: (String) -> Pair<Boolean, String> = { false to "" },
+   ascii: Boolean = false,
    keyboardType: KeyboardType = KeyboardType.Text,
    imeAction: ImeAction = ImeAction.Done,
    modifier: Modifier = Modifier,
@@ -67,9 +70,11 @@ fun InputValueString(
          },
       value = value,
       onValueChange = { it ->
-         logDebug(tag, "onValueChange $it")
-         onValueChange(it)
-                      },
+         var input = it
+         if(ascii) input = sanitizeDigit(input) // äöü -> aeoeue for emails
+         logDebug(tag, "onValueChange $input")
+         onValueChange(input)
+      },
       label = { Text(label) },
       textStyle = MaterialTheme.typography.bodyLarge,
       leadingIcon = leadingIcon?.let { { Icon(it, contentDescription = label) } },
@@ -77,11 +82,16 @@ fun InputValueString(
       keyboardOptions = KeyboardOptions(keyboardType = keyboardType,
                                         imeAction = imeAction),
       keyboardActions = KeyboardActions(
-         onAny = {
+         onNext = {
             validateAndPropagate(value)
-            if (!isError) focusManager.clearFocus()
+            focusManager.moveFocus(FocusDirection.Down)
+         },
+         onDone = {
+            validateAndPropagate(value)
+            focusManager.clearFocus()
          }
       ),
+
       isError = isError,
       supportingText = {
          if (isError) Text(text = errorMessage,

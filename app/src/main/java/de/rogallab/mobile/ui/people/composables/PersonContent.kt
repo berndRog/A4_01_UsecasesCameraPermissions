@@ -42,37 +42,43 @@ fun PersonContent(
          value = personUiState.person.firstName,
          onValueChange = onFirstNameChange,
          label = stringResource(R.string.firstName),
+         validate = validator::validateFirstName,
+         ascii = false,
          leadingIcon = Icons.Outlined.Person,
          keyboardType = KeyboardType.Text,
          imeAction = ImeAction.Next,
-         validate = validator::validateFirstName,
+
       )
       InputValueString(
          value = personUiState.person.lastName,
          onValueChange = onLastNameChange,
          label = stringResource(R.string.lastName),
+         validate = validator::validateLastName,
+         ascii = false,
          leadingIcon = Icons.Outlined.Person,
          keyboardType = KeyboardType.Text,
          imeAction = ImeAction.Next,
-         validate = validator::validateLastName,
       )
       InputValueString(
          value = personUiState.person.email ?: "",
          onValueChange = onEmailChange,
          label = stringResource(R.string.email),
+         validate = validator::validateEmail,
+         ascii = true, // sanitize email input äöüß -> aeoeuss
          leadingIcon = Icons.Outlined.Email,
          keyboardType = KeyboardType.Email,
          imeAction = ImeAction.Next,
-         validate = validator::validateEmail
+
       )
       InputValueString(
          value = personUiState.person.phone ?: "",
          onValueChange = onPhoneChange,
          label = stringResource(R.string.phone),
+         validate = validator::validatePhone,
+         ascii = false,
          leadingIcon = Icons.Outlined.Phone,
          keyboardType = KeyboardType.Phone,
          imeAction = ImeAction.Done,
-         validate = validator::validatePhone
       )
 
       SelectAndShowImage(

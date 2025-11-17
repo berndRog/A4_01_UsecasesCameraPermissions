@@ -48,15 +48,11 @@ class MainActivity : BaseActivity(TAG) {
       setContent {
 
          val nComp = remember { mutableIntStateOf(1) }
-         SideEffect { logComp(TAG, "Composition #${nComp.value++}") }
-
+         SideEffect { logComp(TAG, "Composition #${nComp.intValue++}") }
 
          AppTheme {
-            AppNavigation(
-               // startDestination = PeopleList
-               navViewModel = _navViewModel,
-               personViewModel = _personViewModel,
-               imageViewModel = _imageViewModel
+            AppNavigation( // startDestination = PeopleList
+               navViewModel = _navViewModel
             )
          }
       }

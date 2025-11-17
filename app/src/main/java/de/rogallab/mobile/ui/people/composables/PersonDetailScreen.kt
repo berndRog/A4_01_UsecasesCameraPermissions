@@ -16,6 +16,7 @@ import de.rogallab.mobile.domain.utilities.logComp
 import de.rogallab.mobile.ui.base.composables.CollectBy
 import de.rogallab.mobile.ui.errors.ErrorHandler
 import de.rogallab.mobile.ui.images.ImageViewModel
+import de.rogallab.mobile.ui.people.PeopleIntent
 import de.rogallab.mobile.ui.people.PersonIntent
 import de.rogallab.mobile.ui.people.PersonUiState
 import de.rogallab.mobile.ui.people.PersonValidator
@@ -34,7 +35,7 @@ fun PersonDetailScreen(
    val nComp = remember { mutableIntStateOf(1) }
    SideEffect { logComp(tag, "Composition #${nComp.value++}") }
 
-   val groupName = Globals.file_name.split(".").first()
+   val groupName = Globals.fileName.split(".").first()
 
    // observe PersonUiStateFlow
    val personUiState: PersonUiState = CollectBy(viewModel.personUiStateFlow, tag)
@@ -118,9 +119,9 @@ fun PersonDetailScreen(
       }
    }
 
-   // Error handling
    ErrorHandler(
       viewModel = viewModel,
-      snackbarHostState = snackbarHostState
+      snackbarHostState = snackbarHostState,
+      onCleanUp = { viewModel.handlePeopleIntent(PeopleIntent.Clean)}
    )
 }

@@ -32,8 +32,9 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
+// problems with java version 17 and android sdk 36
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [35], application = TestApplication::class)
+@Config(sdk = [34], application = TestApplication::class)
 class PeoplePersonUsecasesUt : KoinTest {
 
    @get:Rule

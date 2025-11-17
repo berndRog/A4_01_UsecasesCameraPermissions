@@ -7,7 +7,6 @@ import java.nio.file.Path
 interface IDataStore {
 
    val filePath: Path
-   suspend fun initialize()
 
    fun selectAll(): Flow<List<Person>>
    fun selectAllSortedBy(selector: (Person) -> String?): Flow<List<Person>>
@@ -20,4 +19,5 @@ interface IDataStore {
    suspend fun update(person: Person)
    suspend fun delete(person: Person)
 
+   suspend fun initialize()
 }

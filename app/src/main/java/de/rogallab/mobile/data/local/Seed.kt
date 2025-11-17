@@ -6,6 +6,7 @@ import de.rogallab.mobile.R
 import de.rogallab.mobile.domain.IAppStorage
 import de.rogallab.mobile.domain.entities.Person
 import de.rogallab.mobile.domain.utilities.logDebug
+import de.rogallab.mobile.domain.utilities.sanitizeDigit
 import kotlinx.coroutines.runBlocking
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
@@ -24,14 +25,12 @@ class Seed(
    private val _context: Context,
    private val _isTest: Boolean = false
 ): KoinComponent {
+   private val _fileName = Globals.fileName
+   private val _imageDirectoryName = File(_fileName).nameWithoutExtension
 
    private val _appStorage: IAppStorage by inject()
 
    var people: MutableList<Person> = mutableListOf<Person>()
-   
-   private val _imagesUri = mutableListOf<String>()
-   private val _fileName = Globals.file_name
-   private val _imageDirectoryName = File(_fileName).nameWithoutExtension
 
    init {
       val firstNames = mutableListOf(
@@ -52,9 +51,11 @@ class Seed(
 //         var indexLast = random.nextInt(lastNames.size)
          val firstName = firstNames[index]
          val lastName = lastNames[index]
+
+
          val email =
-            "${firstName.lowercase()}." +
-               "${lastName.lowercase()}@" +
+            "${sanitizeDigit(firstName.lowercase(locale = Locale.ROOT))}." +
+               "${sanitizeDigit(lastName.lowercase(locale = Locale.ROOT))}@" +
                "${emailProvider.random()}"
          val phone: String =
             "0${random.nextInt(1234, 9999)} " +

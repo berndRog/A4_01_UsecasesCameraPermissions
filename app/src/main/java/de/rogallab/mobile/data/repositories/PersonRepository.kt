@@ -3,42 +3,51 @@ package de.rogallab.mobile.data.repositories
 import de.rogallab.mobile.data.IDataStore
 import de.rogallab.mobile.domain.IPersonRepository
 import de.rogallab.mobile.domain.entities.Person
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
+import kotlin.coroutines.cancellation.CancellationException
 import kotlin.text.insert
 
 class PersonRepository(
    private val _dataStore: IDataStore
 ) : IPersonRepository {
    override fun getAll(): Flow<Result<List<Person>>> =
-      _dataStore.selectAll()
-         .map { Result.success(it) }
-         .catch { e -> emit(Result.failure(e)) }
+//    _dataStore.selectAll()
+//      .map { Result.success(it) }
+//      .catch { e ->
+//         if (e is CancellationException) throw e
+//          emit(Result.failure(e))
+//      }
+      _dataStore.selectAll().asResult()
 
    override fun getAllSortedBy(selector: (Person) -> String?): Flow<Result<List<Person>>> =
-      _dataStore.selectAllSortedBy(selector)
-         .map { Result.success(it) }
-         .catch { e -> emit(Result.failure(e)) }
+      _dataStore.selectAllSortedBy(selector).asResult()
 
    override fun getWhere(predicate: (Person) -> Boolean): Flow<Result<List<Person>>> =
-      _dataStore.selectWhere(predicate)
-         .map { Result.success(it) }
-         .catch { e -> emit(Result.failure(e)) }
+      _dataStore.selectWhere(predicate).asResult()
 
    override suspend fun findById(id: String): Result<Person?> =
-      runCatching { _dataStore.findById(id)  }
+//    try { Result.success( _dataStore.findById(id) ) }
+//    catch (e: CancellationException) { throw e }
+//    catch (e: Exception) { Result.failure(e) }
+      tryCatching { _dataStore.findById(id)  }
 
    override suspend fun findBy(predicate: (Person) -> Boolean): Result<Person?> =
-      runCatching { _dataStore.findBy(predicate)  }
+      tryCatching { _dataStore.findBy(predicate)  }
 
    override suspend fun create(person: Person): Result<Unit> =
-      runCatching { _dataStore.insert(person) }
+      tryCatching { _dataStore.insert(person) }
 
    override suspend fun update(person: Person): Result<Unit> =
-      runCatching { _dataStore.update(person) }
+      tryCatching { _dataStore.update(person) }
 
    override suspend fun remove(person: Person): Result<Unit> =
-      runCatching { _dataStore.delete(person) }
+      tryCatching { _dataStore.delete(person) }
 
 }

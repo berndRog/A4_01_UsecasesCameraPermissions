@@ -13,6 +13,7 @@ import de.rogallab.mobile.ui.navigation.PeopleList
 import de.rogallab.mobile.ui.people.PeopleIntent
 import de.rogallab.mobile.ui.people.PersonIntent
 import de.rogallab.mobile.ui.people.PersonViewModel
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.After
@@ -31,8 +32,10 @@ import java.nio.file.Path
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
+// problems with java version 17 and android sdk 36
+@OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(org.robolectric.RobolectricTestRunner::class)
-@Config(sdk = [35], application = TestApplication::class)
+@Config(sdk = [34], application = TestApplication::class)
 class PersonViewModelIntegrationTest : KoinTest {
 
    @get:Rule
@@ -104,6 +107,7 @@ class PersonViewModelIntegrationTest : KoinTest {
          cancelAndIgnoreRemainingEvents()
       }
    }
+
 
    @Test
    fun fetchById_loads_person() = runTest {

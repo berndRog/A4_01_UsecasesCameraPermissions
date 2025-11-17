@@ -28,8 +28,9 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 
+// problems with java version 17 and android sdk 36
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [35], application = TestApplication::class) // <- nutzt deine TestApp
+@Config(sdk = [34], application = TestApplication::class) // <- nutzt deine TestApp
 class IDataStoreUt: KoinTest {
    @get:Rule
    val tempDir = TemporaryFolder()

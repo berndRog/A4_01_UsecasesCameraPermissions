@@ -2,7 +2,7 @@ package de.rogallab.mobile.domain.usecases.images
 
 import android.net.Uri
 import androidx.core.net.toUri
-import de.rogallab.mobile.Globals.MEDIA_STORE_GROUP_NAME
+import de.rogallab.mobile.Globals
 import de.rogallab.mobile.domain.IAppStorage
 import de.rogallab.mobile.domain.IMediaStore
 import de.rogallab.mobile.domain.exceptions.IoException
@@ -14,7 +14,7 @@ class ImageUcCaptureCam(
    suspend operator fun invoke(capturedImageUriString: String, groupName: String): Result<Uri> {
       return try {
          val sourceUri = capturedImageUriString.toUri()
-         val groupName = groupName.ifBlank { MEDIA_STORE_GROUP_NAME }
+         val groupName = groupName.ifBlank { Globals.mediaStoreGroupname }
 
          // Save camera-captured image to MediaStore
          val uriMediaStore = _mediaStore.saveImageToMediaStore(groupName,sourceUri )

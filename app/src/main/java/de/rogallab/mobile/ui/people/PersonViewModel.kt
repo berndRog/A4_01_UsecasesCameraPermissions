@@ -2,6 +2,7 @@ package de.rogallab.mobile.ui.people
 
 import androidx.compose.material3.SnackbarDuration
 import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.compose.viewModel
 import de.rogallab.mobile.domain.IPeopleUcFetchSorted
 import de.rogallab.mobile.domain.IPersonUseCases
 import de.rogallab.mobile.domain.entities.Person
@@ -13,6 +14,7 @@ import de.rogallab.mobile.ui.navigation.INavHandler
 import de.rogallab.mobile.ui.navigation.PeopleList
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlin.onSuccess
 
 class PersonViewModel(
    private val _fetchSorted: IPeopleUcFetchSorted,
@@ -36,6 +38,7 @@ class PersonViewModel(
    fun handlePeopleIntent(intent: PeopleIntent) {
       when (intent) {
          is PeopleIntent.Fetch -> fetch()
+         is PeopleIntent.Clean -> cleanUp()
       }
    }
 
@@ -59,6 +62,8 @@ class PersonViewModel(
          is PersonIntent.Create -> create()
          is PersonIntent.Update -> update()
          is PersonIntent.Remove -> remove(intent.person)
+
+         is PersonIntent.RemoveUndo -> removeUndo(intent.person)
          is PersonIntent.Undo -> undoRemove()
          is PersonIntent.Restored -> restored()
 
@@ -86,7 +91,7 @@ class PersonViewModel(
 
    private fun onPhoneChange(phone: String?) =
       updateState(_personUiStateFlow) {
-         copy(person = person.copy(phone = phone?.trim()))
+         copy(person = person.copy(phone = phone))
       }
 
    private fun onImagePathChange(uriString: String?) =
@@ -119,20 +124,27 @@ class PersonViewModel(
 
    // region Create/Update (persist then refresh list) --------------------------
    private fun create() {
-      logDebug(TAG, "createPerson")
+      logDebug(TAG, "create")
       viewModelScope.launch {
          _personUc.create(_personUiStateFlow.value.person)
-            .onSuccess { fetch() } // reread all people
-            .onFailure { t -> handleErrorEvent(t) }
+            .onSuccess {  } // dot reread all people, is a hot flow now
+            .onFailure { handleErrorEvent(it) }
       }
    }
-
    private fun update() {
-      logDebug(TAG, "updatePerson()")
+      logDebug(TAG, "update()")
       viewModelScope.launch {
          _personUc.update(_personUiStateFlow.value.person)
-            .onSuccess { fetch() } // reread all people
-            .onFailure { t -> handleErrorEvent(t) }
+            .onSuccess {  } // dot reread all people, is a hot flow now
+            .onFailure { handleErrorEvent(it) }
+      }
+   }
+   private fun remove(person: Person) {
+      logDebug(TAG, "remove()")
+      viewModelScope.launch {
+         _personUc.remove(_personUiStateFlow.value.person)
+            .onSuccess { } // dot reread all people, is a hot flow now
+            .onFailure { handleErrorEvent(it) }
       }
    }
    // endregion
@@ -141,76 +153,35 @@ class PersonViewModel(
    private var _removedPerson: Person? = null
    private var _removedPersonIndex: Int = -1 // Store only the index
 
-   /**
-    * REMOVE (Optimistic-then-Persist)
-    * Step-by-step:
-    * 1) Find the index by ID (more robust than instance equality)
-    * 2) Store (person, index) in the undo buffer
-    * 3) Update UI state immediately (remove from list)
-    * 4) Persist the deletion in background (repository call)
-    */
-   private fun remove(person: Person) {
+   private fun removeUndo(person: Person) {
       logDebug(TAG, "removePerson()")
-
-      // First step: Optimistic UI update
-      // Find index of person to remove
-      val currentList = _peopleUiStateFlow.value.people
-      val index = currentList.indexOfFirst { it.id == person.id }
-      if (index == -1) return
-      _removedPerson = person
-      _removedPersonIndex = index
-
-      // Remove person in StateFlow and
-      // immediately update UI - without data handling
-      val updatedList = currentList.toMutableList().also { it.removeAt(index) }
-      updateState(_peopleUiStateFlow) { copy(people = updatedList) }
-
-      // Second step: Persistence in background
-      // Remove person from repository
-      viewModelScope.launch {
-         _personUc.remove(person)
-            .onFailure { t -> handleErrorEvent(t) }
-      }
+      removeItem(
+         item = person,
+         currentList = _peopleUiStateFlow.value.people,
+         getId = { it.id },
+         onRemovedItem = { _removedPerson = it as? Person },
+         onRemovedItemIndex = { _removedPersonIndex = it },
+         updateUi = { updatedList -> updateState(_peopleUiStateFlow) { copy(people = updatedList) } },
+         persistRemove = { _personUc.remove(it) },
+         tag = TAG
+      )
    }
 
-   /**
-    * UNDO (Optimistic-then-Persist)
-    * 1) Read undo buffer; abort if empty
-    * 2) Reinsert into current UI at the old index (coerceAtMost avoids OOB if list length changed)
-    * 3) Set restoredPersonId so the UI can scroll to it
-    * 4) Persist create back in the repository
-    * 5) Clear the undo buffer
-    */
    private fun undoRemove() {
-      // Restore the last removed person if any
-      val personToRestore = _removedPerson ?: return
-      val indexToRestore = _removedPersonIndex
-      if (indexToRestore == -1) return
-      logDebug(TAG, "undoRemovePerson: ${personToRestore.id}")
-
-      // Restore person in StateFlow and
-      // immediately update UI - without data handling
-      val currentList = _peopleUiStateFlow.value.people.toMutableList()
-      if (currentList.any { it.id == personToRestore.id }) return // already in the list
-      // Reinsert at old index (or at end if list got shorter)
-      currentList.add(indexToRestore.coerceAtMost(currentList.size), personToRestore)
-      updateState(_peopleUiStateFlow) {
-         copy(people = currentList, restoredPersonId = personToRestore.id)
-      }
-
-      // Add person back to repository in background
-      viewModelScope.launch {
-         _personUc.create(personToRestore)
-            .onFailure { t -> handleErrorEvent(t) }
-      }
-      _removedPerson = null
-      _removedPersonIndex = -1
+      undoItem(
+         currentList = _peopleUiStateFlow.value.people,
+         getId = { it.id },
+         removedItem = _removedPerson,
+         removedIndex = _removedPersonIndex,
+         updateUi = { restoredList, restoredId ->
+            updateState(_peopleUiStateFlow) { copy(people = restoredList, restoredPersonId = restoredId) }
+         },
+         persistCreate = { _personUc.create(it) },
+         onReset = { _removedPerson = null; _removedPersonIndex = -1 },
+         tag = TAG
+      )
    }
 
-   /** RESTORED (Optimistic-then-Persist)
-    * The UI has scrolled to the restored item and acknowledges this by sending PersonIntent.Restored.
-    * We then clear the ID in the PeopleUiState to avoid repeated scrolling on recomposition.
-    */
    private fun restored() {
       logDebug(TAG, "restored() acknowledged by UI")
       // The UI has finished scrolling, so we clear the ID
@@ -253,8 +224,6 @@ class PersonViewModel(
    // region Fetch all (persisted → UI) ------------------------------------------------------------
    // read all people from repository
    private fun fetch() {
-      logDebug(TAG, "fetch")
-
       viewModelScope.launch {
          _fetchSorted { it.firstName }
             // consume isLoading state
@@ -270,13 +239,7 @@ class PersonViewModel(
                   // consume people list
                   .onSuccess { people ->
                      val snapshot = people.toList()
-                     updateState(_peopleUiStateFlow) {
-                        logDebug(TAG, "PeopleUiState: isLoading=false size=${snapshot.size}")
-                        copy(
-                           isLoading = false,
-                           people = snapshot
-                        )
-                     }
+                     updateState(_peopleUiStateFlow) { copy(isLoading = false, people = snapshot) }
                   }
                   .onFailure { t ->
                      updateState(_peopleUiStateFlow) { copy(isLoading = false) }
@@ -284,6 +247,11 @@ class PersonViewModel(
                   }
             }
       } // end launch
+   }
+
+   private fun cleanUp() {
+      logDebug(TAG, "cleanUp()")
+      updateState(_peopleUiStateFlow) { copy(isLoading = false) }
    }
    // endregion
 

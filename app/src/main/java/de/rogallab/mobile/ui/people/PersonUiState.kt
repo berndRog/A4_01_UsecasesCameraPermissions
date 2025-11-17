@@ -6,6 +6,5 @@ import de.rogallab.mobile.domain.utilities.newUuid
 
 @Immutable
 data class PersonUiState(
-   val person: Person = Person(id =  newUuid()),  // Uuid as String
-   val throwable: Throwable? = null
+   val person: Person = Person(id =  newUuid())
 )

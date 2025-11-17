@@ -112,12 +112,9 @@ class PersonViewModel(
       viewModelScope.launch {
          _personUc.fetchById(id)
             .onSuccess { person ->
-               logDebug(TAG, "fetchPersonById")
                updateState(_personUiStateFlow) { copy(person = person) }
             }
-            .onFailure { t ->
-               handleErrorEvent(t, navKey = PeopleList)
-            }
+            .onFailure { handleErrorEvent(it, navKey = PeopleList) }
       }
    }
    // endregion
@@ -127,7 +124,7 @@ class PersonViewModel(
       logDebug(TAG, "create")
       viewModelScope.launch {
          _personUc.create(_personUiStateFlow.value.person)
-            .onSuccess {  } // dot reread all people, is a hot flow now
+            .onSuccess {  }
             .onFailure { handleErrorEvent(it) }
       }
    }
@@ -135,7 +132,7 @@ class PersonViewModel(
       logDebug(TAG, "update()")
       viewModelScope.launch {
          _personUc.update(_personUiStateFlow.value.person)
-            .onSuccess {  } // dot reread all people, is a hot flow now
+            .onSuccess {  }
             .onFailure { handleErrorEvent(it) }
       }
    }
@@ -143,7 +140,7 @@ class PersonViewModel(
       logDebug(TAG, "remove()")
       viewModelScope.launch {
          _personUc.remove(_personUiStateFlow.value.person)
-            .onSuccess { } // dot reread all people, is a hot flow now
+            .onSuccess { }
             .onFailure { handleErrorEvent(it) }
       }
    }
@@ -166,7 +163,6 @@ class PersonViewModel(
          tag = TAG
       )
    }
-
    private fun undoRemove() {
       undoItem(
          currentList = _peopleUiStateFlow.value.people,
@@ -181,7 +177,6 @@ class PersonViewModel(
          tag = TAG
       )
    }
-
    private fun restored() {
       logDebug(TAG, "restored() acknowledged by UI")
       // The UI has finished scrolling, so we clear the ID

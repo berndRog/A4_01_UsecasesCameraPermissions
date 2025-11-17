@@ -9,6 +9,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import de.rogallab.mobile.domain.utilities.logComp
 import de.rogallab.mobile.domain.utilities.logDebug
+import de.rogallab.mobile.domain.utilities.logVerbose
 import de.rogallab.mobile.ui.base.BaseActivity
 import de.rogallab.mobile.ui.images.ImageViewModel
 import de.rogallab.mobile.ui.navigation.INavHandler
@@ -25,23 +26,23 @@ class MainActivity : BaseActivity(TAG) {
 
    // lazy initialization of the ViewModel with koin
    // Activity-scoped ViewModels viewModelStoreOwner = MainActivity
-   private val _navViewModel: Nav3ViewModel by viewModel {
-      parametersOf(PeopleList) }
-
-   private val _personViewModel: PersonViewModel by viewModel{
-      parametersOf(_navViewModel as INavHandler) }
-   private val _imageViewModel: ImageViewModel by viewModel{
-      parametersOf(_navViewModel as INavHandler) }
+//   private val _navViewModel: Nav3ViewModel by viewModel {
+//      parametersOf(PeopleList) }
+//
+//   private val _personViewModel: PersonViewModel by viewModel{
+//      parametersOf(_navViewModel as INavHandler) }
+//   private val _imageViewModel: ImageViewModel by viewModel{
+//      parametersOf(_navViewModel as INavHandler) }
 
 
    override fun onCreate(savedInstanceState: Bundle?) {
       super.onCreate(savedInstanceState)
 
-      logDebug(TAG, "_navViewModel=${System.identityHashCode(_navViewModel)}")
-      logDebug(TAG, "_peopleViewModel=${System.identityHashCode(_personViewModel)}")
+//      logDebug(TAG, "_navViewModel=${System.identityHashCode(_navViewModel)}")
+//      logDebug(TAG, "_peopleViewModel=${System.identityHashCode(_personViewModel)}")
 
       val permissionReport = this.buildPermissionReport()
-
+      permissionReport.forEach { logVerbose(TAG,it.toFormattedString()) }
 
       enableEdgeToEdge()
 
@@ -51,9 +52,7 @@ class MainActivity : BaseActivity(TAG) {
          SideEffect { logComp(TAG, "Composition #${nComp.intValue++}") }
 
          AppTheme {
-            AppNavigation( // startDestination = PeopleList
-               navViewModel = _navViewModel
-            )
+            AppNavigation()
          }
       }
 

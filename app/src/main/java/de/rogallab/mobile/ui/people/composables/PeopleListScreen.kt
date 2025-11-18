@@ -167,6 +167,6 @@ fun PeopleListScreen(
    ErrorHandler(
       viewModel = viewModel,
       snackbarHostState = snackbarHostState,
-      onCleanUp = { viewModel.handlePeopleIntent(PeopleIntent.Clean)}
+      onCleanUp = { viewModel.cleanUp()}
    )
 }

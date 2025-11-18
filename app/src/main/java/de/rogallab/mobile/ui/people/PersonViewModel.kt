@@ -38,7 +38,6 @@ class PersonViewModel(
    fun handlePeopleIntent(intent: PeopleIntent) {
       when (intent) {
          is PeopleIntent.Fetch -> fetch()
-         is PeopleIntent.Clean -> cleanUp()
       }
    }
 
@@ -244,7 +243,7 @@ class PersonViewModel(
       } // end launch
    }
 
-   private fun cleanUp() {
+   fun cleanUp() {
       logDebug(TAG, "cleanUp()")
       updateState(_peopleUiStateFlow) { copy(isLoading = false) }
    }

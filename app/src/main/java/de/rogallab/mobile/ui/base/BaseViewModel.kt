@@ -13,7 +13,7 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
 
-open class BaseViewModel(
+abstract class BaseViewModel(
    private val _navHandler: INavHandler,
    private val _tag: String = "<-BaseViewModel"
 ): ViewModel() {

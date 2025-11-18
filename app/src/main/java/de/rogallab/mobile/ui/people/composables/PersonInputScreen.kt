@@ -114,7 +114,6 @@ fun PersonInputScreen(
 
    ErrorHandler(
       viewModel = viewModel,
-      snackbarHostState = snackbarHostState,
-      onCleanUp = { viewModel.handlePeopleIntent(PeopleIntent.Clean)}
+      snackbarHostState = snackbarHostState
    )
 }

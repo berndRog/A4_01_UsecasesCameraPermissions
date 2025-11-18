@@ -15,7 +15,7 @@ import kotlinx.coroutines.flow.map
  * This ensures that coroutine cancellation (e.g., when leaving a screen
  * or when using collectLatest) does not trigger UI error handling.
  */
-inline fun <T> Flow<T>.asResult(): Flow<Result<T>> =
+fun <T> Flow<T>.asResult(): Flow<Result<T>> =
    this // :Flow<T>
       .map { value -> Result.success(value) }
       .catch { e ->

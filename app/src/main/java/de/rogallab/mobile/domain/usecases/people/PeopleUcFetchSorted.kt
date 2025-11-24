@@ -8,6 +8,6 @@ import kotlinx.coroutines.flow.Flow
 class PeopleUcFetchSorted(
    private val _repository: IPersonRepository
 ): IPeopleUcFetchSorted {
-    override suspend operator fun invoke(selector: (Person) -> String?)
-    : Flow<Result<List<Person>>> = _repository.getAllSortedBy(selector)
+    override suspend operator fun invoke()
+    : Flow<Result<List<Person>>> = _repository.getAllSorted()
 }

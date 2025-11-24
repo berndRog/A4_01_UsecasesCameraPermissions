@@ -1,4 +1,4 @@
-package de.rogallab.mobile.test
+package de.rogallab.mobile.androidTest
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi

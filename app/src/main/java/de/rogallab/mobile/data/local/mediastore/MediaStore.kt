@@ -24,7 +24,7 @@ import java.util.UUID
 
 class MediaStore(
    private val _context: Context,
-   private val _ioDispatcher: CoroutineDispatcher = Dispatchers.IO
+   private val _dispatcher: CoroutineDispatcher = Dispatchers.IO
 ) : IMediaStore {
 
    // Create a session folder name based on current date and time
@@ -106,7 +106,7 @@ class MediaStore(
    override suspend fun saveImageToMediaStore(
       groupName: String,
       sourceUri: Uri
-   ): Uri? = withContext(_ioDispatcher) { // heavy io operation
+   ): Uri? = withContext(_dispatcher) { // heavy io operation
 
       var bitmap: Bitmap? = null
       var uriMediaStore: Uri? = null
@@ -164,7 +164,7 @@ class MediaStore(
       drawableId: Int,
       groupName: String,
       uuidString: String?
-   ): Uri? = withContext(_ioDispatcher) {
+   ): Uri? = withContext(_dispatcher) {
 
       var bitmap: Bitmap? = null
 
@@ -206,7 +206,7 @@ class MediaStore(
       sourceUri: Uri,
       groupName: String,
       appStorage: IAppStorage
-   ): Uri? = withContext(_ioDispatcher) {
+   ): Uri? = withContext(_dispatcher) {
       try {
          return@withContext appStorage.convertImageUriToAppStorage(
             sourceUri = sourceUri,
@@ -220,7 +220,7 @@ class MediaStore(
    // Load bitmap from any URI (MediaStore, file URI, content URI)
    override suspend fun loadBitmap(
       uri: Uri
-   ): Bitmap? = withContext(_ioDispatcher) {
+   ): Bitmap? = withContext(_dispatcher) {
       try {
          if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             val source = ImageDecoder.createSource(_context.contentResolver, uri) // Fix: _context

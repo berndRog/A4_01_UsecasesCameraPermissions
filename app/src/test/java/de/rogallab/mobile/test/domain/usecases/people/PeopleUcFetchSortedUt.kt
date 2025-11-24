@@ -113,7 +113,7 @@ class PeoplePersonUsecasesUt : KoinTest {
       val expected = _seed.people.toList() // make a copy
 
       // act + assert
-      useCase.invoke(selector = selector).test {
+      useCase.invoke().test {
          val result = awaitItem()
          assertTrue(result.isSuccess)
          val actual = result.getOrThrow()

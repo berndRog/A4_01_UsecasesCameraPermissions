@@ -81,27 +81,14 @@ class IPersonRepositoryUt : KoinTest {
       }
    }
 
-   @Test
-   fun getAllUt_ok() = runTest {
-      // arrange
-      val expected = _seedPeople
-      // act / assert
-      _repository.getAll().test {
-         awaitItem()
-            .onSuccess {
-               assertContentEquals(expected, it.toMutableList())
-            }
-            .onFailure { fail(it.message) }
-         cancelAndIgnoreRemainingEvents()
-      }
-   }
+
 
    @Test
    fun getAllSortByUt_ok() = runTest {
       // arrange
       val expected = _seedPeople.sortedBy { it.firstName }
       // act / assert
-      _repository.getAllSortedBy{ it.firstName }.test {
+      _repository.getAllSorted().test {
          awaitItem()
             .onSuccess { assertContentEquals(expected, it.toMutableList()) }
             .onFailure { fail(it.message) }
@@ -117,7 +104,7 @@ class IPersonRepositoryUt : KoinTest {
       )
 
       // act / assert: subscribe to flow, perform insert, expect another emission containing the new person
-      _repository.getAll().test {
+      _repository.getAllSorted().test {
          // consume initial emission
          val initial = awaitItem()
          initial.onFailure { fail(it.message) }
@@ -142,20 +129,6 @@ class IPersonRepositoryUt : KoinTest {
    }
 
    @Test
-   fun getWhereUt_ok() = runTest {
-      // arrange
-      val expected = _seedPeople.filter{
-         it.email?.contains("gmail",true) ?: false }
-      // act / assert
-      _repository.getWhere { it.email?.contains("gmail",true) ?: false }.test {
-         awaitItem()
-            .onSuccess { result ->
-               assertContentEquals(expected, result) }
-            .onFailure { fail(it.message) }
-      }
-   }
-
-   @Test
    fun findByIdUt_ok() = runTest {
       // arrange
       val id = "01000000-0000-0000-0000-000000000000"
@@ -164,19 +137,6 @@ class IPersonRepositoryUt : KoinTest {
       // act / assert
       _repository.findById(id)
          .onSuccess { assertEquals(expected, it)  }
-         .onFailure { fail(it.message) }
-   }
-
-   @Test
-   fun findByUt_ok() = runTest {
-      // arrange
-      val phone = "02090"
-      val expected = _seedPeople.firstOrNull { person ->
-         person.phone?.contains(phone,true ) ?: false }
-      assertNotNull(expected)
-      // act / assert
-      _repository.findBy { it.phone?.contains(phone,true ) ?: false }
-         .onSuccess { assertEquals(expected, it) }
          .onFailure { fail(it.message) }
    }
 

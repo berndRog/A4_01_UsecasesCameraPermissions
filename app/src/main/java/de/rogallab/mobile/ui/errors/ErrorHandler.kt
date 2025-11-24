@@ -8,7 +8,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
-import de.rogallab.mobile.domain.utilities.logVerbose
+import de.rogallab.mobile.domain.utilities.logDebug
 import de.rogallab.mobile.ui.base.BaseViewModel
 import kotlinx.coroutines.flow.collectLatest
 
@@ -25,15 +25,13 @@ fun ErrorHandler(
    val lifecycle = lifecycleOwner.lifecycle
 
    LaunchedEffect(viewModel, lifecycleOwner, lifecycle, snackbarHostState) {
-      logVerbose(tag, "lifecycleOwner:$lifecycleOwner")
-      logVerbose(tag, "lifecycle.State:${lifecycle.currentState}")
 
       lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
          // collectLatest automatically cancels the currently running Snackbar
          // when a new event is emitted.
          viewModel.errorFlow.collectLatest { errorState ->
             if (errorState == null) return@collectLatest
-            logVerbose(tag, "$errorState")
+            logDebug(tag, "lifecycleOwner:$lifecycleOwner, lifecycle.State:${lifecycle.currentState}")
             try {
                showError(snackbarHostState, errorState)
             } finally {

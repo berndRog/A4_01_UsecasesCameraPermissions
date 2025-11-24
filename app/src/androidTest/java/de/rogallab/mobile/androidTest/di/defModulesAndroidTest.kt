@@ -1,4 +1,4 @@
-package de.rogallab.mobile.test.di
+package de.rogallab.mobile.androidTest.di
 
 import android.content.Context
 import androidx.navigation3.runtime.NavKey
@@ -33,7 +33,8 @@ import org.koin.core.qualifier.named
 import org.koin.dsl.bind
 import org.koin.dsl.module
 
-fun defModulesTest(
+
+fun defModulesAndroidTest(
    appHomePath: String,
    ioDispatcher: CoroutineDispatcher
 ): Module = module {

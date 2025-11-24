@@ -74,27 +74,15 @@ class DataStore(
    }
 
    // Reactive selects
-   override fun selectAll(): Flow<List<Person>> =
+   override fun selectAllSorted(): Flow<List<Person>> =
       peopleFlow
-
-   override fun selectAllSortedBy(selector: (Person) -> String?): Flow<List<Person>> =
-      peopleFlow
-         .map { list -> list.sortedBy { selector(it)?.lowercase() } }
-         .distinctUntilChanged()
-
-   override fun selectWhere(predicate: (Person) -> Boolean): Flow<List<Person>> =
-      peopleFlow
-         .map { list -> list.filter(predicate) }
+         .map { list -> list.sortedBy { it.lastName.lowercase() } }
          .distinctUntilChanged()
 
    // one shot read
    override suspend fun findById(id: String): Person? =
       peopleFlow.value
          .firstOrNull { it.id == id }
-
-   override suspend fun findBy(predicate: (Person) -> Boolean): Person? =
-      peopleFlow.value
-         .firstOrNull(predicate)
 
    // one show write
    override suspend fun insert(person: Person) {

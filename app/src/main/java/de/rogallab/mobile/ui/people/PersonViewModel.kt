@@ -2,7 +2,6 @@ package de.rogallab.mobile.ui.people
 
 import androidx.compose.material3.SnackbarDuration
 import androidx.lifecycle.viewModelScope
-import androidx.lifecycle.viewmodel.compose.viewModel
 import de.rogallab.mobile.domain.IPeopleUcFetchSorted
 import de.rogallab.mobile.domain.IPersonUseCases
 import de.rogallab.mobile.domain.entities.Person
@@ -12,9 +11,13 @@ import de.rogallab.mobile.ui.base.BaseViewModel
 import de.rogallab.mobile.ui.base.updateState
 import de.rogallab.mobile.ui.navigation.INavHandler
 import de.rogallab.mobile.ui.navigation.PeopleList
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.launch
-import kotlin.onSuccess
 
 class PersonViewModel(
    private val _fetchSorted: IPeopleUcFetchSorted,
@@ -23,9 +26,6 @@ class PersonViewModel(
    private val _validator: PersonValidator
 ) : BaseViewModel(navHandler, TAG) {
 
-   init {
-      logDebug(TAG, "init instance=${System.identityHashCode(this)}")
-   }
 
    // region StateFlows and Intent handlers --------------------------------------------------------
    // StateFlow for PeopleListScreen ---------------------------------------------------------------
@@ -39,6 +39,11 @@ class PersonViewModel(
       when (intent) {
          is PeopleIntent.Fetch -> fetch()
       }
+   }
+
+   init {
+      logDebug(TAG, "init instance=${System.identityHashCode(this)}")
+      fetch()
    }
 
    // StateFlow for PersonInput-/ PersonDetailScreen -----------------------------------------------
@@ -138,7 +143,7 @@ class PersonViewModel(
    private fun remove(person: Person) {
       logDebug(TAG, "remove()")
       viewModelScope.launch {
-         _personUc.remove(_personUiStateFlow.value.person)
+         _personUc.remove(person)
             .onSuccess { }
             .onFailure { handleErrorEvent(it) }
       }
@@ -155,7 +160,7 @@ class PersonViewModel(
          item = person,
          currentList = _peopleUiStateFlow.value.people,
          getId = { it.id },
-         onRemovedItem = { _removedPerson = it as? Person },
+         onRemovedItem = { _removedPerson = it  },
          onRemovedItemIndex = { _removedPersonIndex = it },
          updateUi = { updatedList -> updateState(_peopleUiStateFlow) { copy(people = updatedList) } },
          persistRemove = { _personUc.remove(it) },
@@ -216,22 +221,28 @@ class PersonViewModel(
    // endregion
 
    // region Fetch all (persisted → UI) ------------------------------------------------------------
-   // read all people from repository
+   // Read all people from the repository and keep PeopleUiState in sync
+// with the reactive Room-backed flow.
    private fun fetch() {
       viewModelScope.launch {
-         _fetchSorted { it.firstName }
-            // consume isLoading state
+         _fetchSorted()
+            // Runs once when the flow collection starts
+            // (e.g. in init{} or when fetch() is explicitly called again).
             .onStart {
                updateState(_peopleUiStateFlow) { copy(isLoading = true) }
             }
+            // Handle exceptions coming from the upstream flow
             .catch { t ->
                updateState(_peopleUiStateFlow) { copy(isLoading = false) }
                handleErrorEvent(t)
             }
+            // Collect the Result<List<Person>> emitted by the Room-backed flow.
+            // Room will emit again whenever the underlying table changes.
             .collectLatest { result ->
                result
-                  // consume people list
                   .onSuccess { people ->
+                     logDebug(TAG,
+                        "fetch() -> onSuccess: set isLoading = false, people size = ${people.size}")
                      val snapshot = people.toList()
                      updateState(_peopleUiStateFlow) { copy(isLoading = false, people = snapshot) }
                   }
@@ -242,6 +253,7 @@ class PersonViewModel(
             }
       } // end launch
    }
+
 
    fun cleanUp() {
       logDebug(TAG, "cleanUp()")

@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
    alias(libs.plugins.android.application)
    alias(libs.plugins.kotlin.android)
@@ -5,6 +7,7 @@ plugins {
    alias(libs.plugins.google.devtools.ksp)
    alias(libs.plugins.kotlin.serialization)
 }
+
 
 android {
    namespace = "de.rogallab.mobile"
@@ -20,6 +23,13 @@ android {
       //   testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
       testInstrumentationRunner = "de.rogallab.mobile.androidTest.TestRunner"
 
+      // Read local.properties from the project root
+      val localProperties = Properties()
+      val localPropertiesFile = rootProject.file("local.properties")
+      if (localPropertiesFile.exists()) {
+         localProperties.load(localPropertiesFile.inputStream())
+      }
+      buildConfigField("String", "NEWS_API_KEY", "\"${localProperties.getProperty("NEWS_API_KEY", "")}\"")
    }
 
    testOptions{
@@ -34,20 +44,21 @@ android {
       }
    }
    compileOptions {
-      sourceCompatibility = JavaVersion.VERSION_17
-      targetCompatibility = JavaVersion.VERSION_17
+      sourceCompatibility = JavaVersion.VERSION_21
+      targetCompatibility = JavaVersion.VERSION_21
    }
    buildFeatures {
+      buildConfig = true
       compose = true
    }
 }
 
 kotlin {
-   jvmToolchain(17)
+   jvmToolchain(21)
 }
 
 dependencies {
-   // Gradle version catalo
+   // Gradle version catalog
    // https://www.youtube.com/watch?v=MWw1jcwPK3Q
 
    // Kotlin
@@ -66,6 +77,7 @@ dependencies {
    // https://developer.android.com/jetpack/androidx/releases/activity
    implementation(libs.androidx.activity.compose)
    implementation(libs.androidx.compose.foundation.layout)
+   implementation(libs.androidx.rules)
    // Ui Compose
    // https://developer.android.com/jetpack/compose/bom/bom-mapping
    val composeBom = platform(libs.androidx.compose.bom)
@@ -182,9 +194,7 @@ dependencies {
    androidTestImplementation(libs.androidx.test.espresso.core)
 
    // Mockito
-   androidTestImplementation(libs.mockito.core)
-   androidTestImplementation(libs.mockito.android)
-   androidTestImplementation(libs.mockito.kotlin)
+   androidTestImplementation(libs.mockk.android)
 
    debugImplementation(libs.androidx.ui.tooling)
    debugImplementation(libs.androidx.ui.test.manifest)

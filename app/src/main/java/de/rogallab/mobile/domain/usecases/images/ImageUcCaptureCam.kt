@@ -22,7 +22,10 @@ class ImageUcCaptureCam(
                "Failed to save image to MediaStore"))
 
          // Convert image from MediaStore to app's storage
-         val uriStorage = _appStorage.convertImageUriToAppStorage(uriMediaStore, groupName)
+         val uriStorage = _appStorage.convertImageUriToAppStorage(
+            sourceUri = uriMediaStore,
+            pathName = "images/$groupName"
+         )
          uriStorage ?: return Result.failure(IoException(
             "Failed to copy image from MediaStore to app storage"))
 

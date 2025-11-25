@@ -193,8 +193,11 @@ dependencies {
    // Espresso To use the androidx.test.espresso
    androidTestImplementation(libs.androidx.test.espresso.core)
 
-   // Mockito
-   androidTestImplementation(libs.mockk.android)
+   // Mockk
+   androidTestImplementation(libs.mockk.android) {
+      exclude(group = "org.junit.jupiter")
+      exclude(group = "org.junit.platform")
+   }
 
    debugImplementation(libs.androidx.ui.tooling)
    debugImplementation(libs.androidx.ui.test.manifest)

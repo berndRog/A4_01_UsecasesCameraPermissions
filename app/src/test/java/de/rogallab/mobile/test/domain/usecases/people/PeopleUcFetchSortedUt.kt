@@ -43,6 +43,10 @@ class PeoplePersonUsecasesUt : KoinTest {
    @get:Rule
    val mainRule = MainDispatcherRule()
 
+   // parameters for tests
+   private val directoryName = "test"
+   private val fileName = "people.json"
+
    private lateinit var _uc: IPeopleUcFetchSorted
    private lateinit var _seed: Seed
    private lateinit var _dataStore: IDataStore
@@ -65,7 +69,9 @@ class PeoplePersonUsecasesUt : KoinTest {
       val koinApp = startKoin {
          modules(
             defModulesTest(
-               appHomePath = tempDir.root.absolutePath,
+               appHomeName = tempDir.root.absolutePath,
+               directoryName = directoryName,
+               fileName = fileName,
                ioDispatcher = mainRule.dispatcher()
             )
          )

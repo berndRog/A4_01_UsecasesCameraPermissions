@@ -62,6 +62,7 @@ fun defModulesAndroidTest(
    logInfo(tag, "test single    -> DataStore: DataStore")
    single<IDataStore> {
       DataStore(
+         appHomeName = appHomePath,
          directoryName = "androidTest",
          fileName = "testPeople_${newUuid()}",
          _context = get<Context>(),
@@ -143,7 +144,7 @@ fun defModulesAndroidTest(
       PersonViewModel(
          _fetchSorted = get<IPeopleUcFetchSorted>(),
          _personUc = get<IPersonUseCases>(),
-         navHandler = navHandler,
+         _navHandler = navHandler,
          _validator = get<PersonValidator>()
       )
    }

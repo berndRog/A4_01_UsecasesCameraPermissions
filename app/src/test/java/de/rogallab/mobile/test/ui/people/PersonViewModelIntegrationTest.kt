@@ -1,9 +1,12 @@
 package de.rogallab.mobile.test.ui.people
 
 import android.content.Context
+import androidx.navigation3.runtime.NavKey
 import app.cash.turbine.test
 import de.rogallab.mobile.data.IDataStore
 import de.rogallab.mobile.data.local.Seed
+import de.rogallab.mobile.domain.IPeopleUcFetchSorted
+import de.rogallab.mobile.domain.IPersonRepository
 import de.rogallab.mobile.domain.entities.Person
 import de.rogallab.mobile.test.MainDispatcherRule
 import de.rogallab.mobile.test.TestApplication
@@ -20,11 +23,12 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
+import org.koin.core.context.startKoin
+import org.koin.core.context.stopKoin
 import org.koin.core.parameter.parametersOf
 import org.koin.test.KoinTest
-import org.koin.test.KoinTestRule
-import org.koin.test.inject
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import java.nio.file.Files
@@ -39,30 +43,27 @@ import kotlin.test.assertTrue
 @OptIn(ExperimentalCoroutinesApi::class)
 class PersonViewModelIntegrationTest : KoinTest {
 
-   // Replaces Dispatchers.Main with a TestDispatcher for deterministic coroutine execution
+
    @get:Rule
-   val mainDispatcherRule = MainDispatcherRule()
+   val tempDir = TemporaryFolder()
 
-   // Starts Koin with test modules
    @get:Rule
-   val koinRule = KoinTestRule.create {
-      modules(
-         defModulesTest(
-            appHomePath = "",
-            ioDispatcher = mainDispatcherRule.testDispatcher
-         )
-      )
-   }
+   val mainRule = MainDispatcherRule()
 
-   // --- DI ---
-   private val _context: Context by inject()
-   private val _dataStore: IDataStore by inject()
-   private val _navHandler: INavHandler by inject { parametersOf(PeopleList) }
-   private val _viewModel: PersonViewModel by inject { parametersOf(_navHandler) }
-   private val _seed: Seed by inject()
 
-   private lateinit var _seedPeople: List<Person>
+   // parameters for tests
+   private val directoryName = "test"
+   private val fileName = "people.json"
+
+   private lateinit var _context: Context
+   private lateinit var _uc: IPeopleUcFetchSorted
+   private lateinit var _seed: Seed
+   private lateinit var _dataStore: IDataStore
+   private lateinit var _repository: IPersonRepository
+   private lateinit var _appHome: Path
    private lateinit var _filePath: Path
+   private lateinit var _seedPeople: List<Person>
+   private lateinit var _viewModel: PersonViewModel
 
    @Before
    fun setUp() = runTest {
@@ -74,11 +75,33 @@ class PersonViewModelIntegrationTest : KoinTest {
       de.rogallab.mobile.Globals.isComp = false
       setupConsoleLogger()
 
-      // Create seed data after Koin has started
-      _seedPeople = _seed.people.toList()
+      stopKoin() // ensure clean graph per test run
+
+      // Boot Koin graph exactly like your other tests
+      val koinApp = startKoin {
+         modules(
+            defModulesTest(
+               appHomeName = tempDir.root.absolutePath,
+               directoryName = directoryName,
+               fileName = fileName,
+               ioDispatcher = mainRule.dispatcher()
+            )
+         )
+      }
+      val koin = koinApp.koin
+      _seed = koin.get<Seed>()
+      _dataStore = koin.get<IDataStore>()
+      _repository = koin.get<IPersonRepository>()
+      val navKey: NavKey = PeopleList
+      val navHandler: INavHandler = koin.get { parametersOf(navKey) }
+      _viewModel = koin.get { parametersOf(navHandler) }
+
 
       _filePath = _dataStore.filePath
       _dataStore.initialize()
+      // Create seed data after Koin has started
+      _seedPeople = _seed.people.toList()
+
 
       // Trigger lazy ViewModel creation so that init { } runs and the initial Room flow starts.
       _viewModel

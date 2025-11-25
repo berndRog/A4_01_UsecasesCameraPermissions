@@ -22,6 +22,7 @@ import java.nio.file.Path
 import java.nio.file.Paths
 
 class DataStore(
+   appHomeName: String? = null,
    directoryName: String? = null,
    fileName: String? = null,
    private val _context: Context,
@@ -30,7 +31,7 @@ class DataStore(
 ) : IDataStore {
 
    // directory and file name for the dataStore from MainApplication
-   private val _appHome: String = _context.filesDir.toString()
+   private val _appHome: String = appHomeName ?: _context.filesDir.toString()
    private var _directoryName = directoryName ?: Globals.directoryName
    private val _fileName = fileName ?: Globals.fileName
 

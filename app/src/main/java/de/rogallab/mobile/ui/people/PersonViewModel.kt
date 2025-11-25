@@ -22,9 +22,9 @@ import kotlinx.coroutines.launch
 class PersonViewModel(
    private val _fetchSorted: IPeopleUcFetchSorted,
    private val _personUc: IPersonUseCases,
-   navHandler: INavHandler,
+   private val _navHandler: INavHandler,
    private val _validator: PersonValidator
-) : BaseViewModel(navHandler, TAG) {
+) : BaseViewModel(_navHandler, TAG) {
 
 
    // region StateFlows and Intent handlers --------------------------------------------------------

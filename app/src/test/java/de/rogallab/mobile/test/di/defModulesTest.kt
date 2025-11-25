@@ -34,14 +34,16 @@ import org.koin.dsl.bind
 import org.koin.dsl.module
 
 fun defModulesTest(
-   appHomePath: String,
+   appHomeName: String,
+   directoryName: String,
+   fileName: String,
    ioDispatcher: CoroutineDispatcher
 ): Module = module {
    val tag = "<-defModulesTest"
 
    // data modules
    single<CoroutineDispatcher>(named("dispatcherIo")) {
-      ioDispatcher
+      ioDispatcher  // testDispatcher
    }
 
    logInfo(tag, "test single    -> ApplicationProvider.getApplicationContext()")
@@ -61,8 +63,9 @@ fun defModulesTest(
    logInfo(tag, "test single    -> DataStore: DataStore")
    single<IDataStore> {
       DataStore(
-         directoryName = "androidTest",
-         fileName = "testPeople_${newUuid()}",
+         appHomeName = appHomeName,
+         directoryName = directoryName,
+         fileName = fileName,
          _context = get<Context>(),
          _seed = get<Seed>(),
          _dispatcher = get(named("dispatcherIo")),
@@ -142,7 +145,7 @@ fun defModulesTest(
       PersonViewModel(
          _fetchSorted = get<IPeopleUcFetchSorted>(),
          _personUc = get<IPersonUseCases>(),
-         navHandler = navHandler,
+         _navHandler = navHandler,
          _validator = get<PersonValidator>()
       )
    }

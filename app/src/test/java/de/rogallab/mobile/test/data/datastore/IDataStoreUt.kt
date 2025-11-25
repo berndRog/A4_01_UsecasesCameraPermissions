@@ -15,6 +15,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
+import org.koin.core.context.GlobalContext
 import org.koin.core.context.GlobalContext.startKoin
 import org.koin.core.context.GlobalContext.stopKoin
 import org.koin.test.KoinTest
@@ -37,6 +38,10 @@ class IDataStoreUt: KoinTest {
    @get:Rule
    val mainRule = MainDispatcherRule()
 
+   // parameters for tests
+   private val directoryName = "test"
+   private val fileName = "peoplea04.json"
+
    private lateinit var _seed: Seed
    private lateinit var _dataStore: IDataStore
    private lateinit var _filePath: Path
@@ -49,12 +54,15 @@ class IDataStoreUt: KoinTest {
       Globals.isDebug = false
       Globals.isVerbose = false
 
-      stopKoin() // falls von anderen Tests übrig
+      GlobalContext.stopKoin() // falls von anderen Tests übrig
+
       val testModule = defModulesTest(
-         appHomePath = tempDir.root.absolutePath,
+         appHomeName = tempDir.root.absolutePath,
+         directoryName = directoryName,
+         fileName = fileName,
          ioDispatcher = mainRule.dispatcher() // StandardTestDispatcher als IO
       )
-      val koinApp = startKoin { modules(testModule) }
+      val koinApp = GlobalContext.startKoin { modules(testModule) }
       val koin = koinApp.koin
       _seed = koin.get<Seed>()
       _dataStore = koin.get<IDataStore>()

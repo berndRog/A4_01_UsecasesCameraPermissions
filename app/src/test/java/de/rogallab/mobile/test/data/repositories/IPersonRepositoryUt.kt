@@ -34,6 +34,10 @@ class IPersonRepositoryUt : KoinTest {
    @get:Rule
    val mainRule = MainDispatcherRule()
 
+   // parameters for tests
+   private val directoryName = "test"
+   private val fileName = "people.json"
+
    private lateinit var _seed: Seed
    private lateinit var _dataStore: IDataStore
    private lateinit var _repository: IPersonRepository
@@ -48,8 +52,11 @@ class IPersonRepositoryUt : KoinTest {
       Globals.isVerbose = false
 
       GlobalContext.stopKoin() // falls von anderen Tests übrig
+
       val testModule = defModulesTest(
-         appHomePath = tempDir.root.absolutePath,
+         appHomeName = tempDir.root.absolutePath,
+         directoryName = directoryName,
+         fileName = fileName,
          ioDispatcher = mainRule.dispatcher() // StandardTestDispatcher als IO
       )
       val koinApp = GlobalContext.startKoin { modules(testModule) }

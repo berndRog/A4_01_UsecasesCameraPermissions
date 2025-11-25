@@ -1,5 +1,5 @@
-# all versions are actual on 2025-11-05
-# and compatible with Java 17
+# all versions are actual on 2025-11-23
+# and compatible with Java 21
 [versions]
 activityCompose = "1.12.0"
 coilCompose = "2.7.0"

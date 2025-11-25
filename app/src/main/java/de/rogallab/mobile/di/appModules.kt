@@ -40,12 +40,10 @@ val defModules: Module = module {
    val tag = "<-defModules"
 
    // Provide Dispatchers
-   logInfo(tag, "single    -> MainDispatcher:CoroutineDispatcher")
-   single<CoroutineDispatcher>(named("MainDispatcher")) { Dispatchers.Main }
-   logInfo(tag, "single    -> IODispatcher:CoroutineDispatcher")
-   single<CoroutineDispatcher>(named("IODispatcher")) { Dispatchers.IO }
-   logInfo(tag, "single    -> DefaultDispatcher:CoroutineDispatcher")
-   single<CoroutineDispatcher>(named("DefaultDispatcher")) { Dispatchers.Default }
+   logInfo(tag, "single    -> DispatcherIo:CoroutineDispatcher")
+   single<CoroutineDispatcher>(named("DispatcherIo")) { Dispatchers.IO }
+   logInfo(tag, "single    -> DispatcherDefault:CoroutineDispatcher")
+   single<CoroutineDispatcher>(named("DispatcherDefault")) { Dispatchers.Default }
 
    logInfo(tag, "single    -> Seed")
    single<Seed> {
@@ -60,7 +58,7 @@ val defModules: Module = module {
    single<IAppStorage> {
       AppStorage(
          _context = androidContext(),
-         _dispatcher = get<CoroutineDispatcher>(named("IODispatcher"))
+         _dispatcher = get<CoroutineDispatcher>(named("DispatcherIo"))
       )
    }
 
@@ -68,10 +66,12 @@ val defModules: Module = module {
    logInfo(tag, "single    -> DataStore")
    single<IDataStore> {
       DataStore(
+         appHomeName = null,
          directoryName = null,
          fileName = null,
          _context = androidContext(),
-         _seed = get<Seed>()
+         _seed = get<Seed>(),
+         _dispatcher = get<CoroutineDispatcher>(named("DispatcherIo"))
       )
    }
 
@@ -79,7 +79,7 @@ val defModules: Module = module {
    single<IMediaStore> {
       MediaStore(
          _context = androidContext(),
-         _dispatcher = get<CoroutineDispatcher>(named("IODispatcher"))
+         _dispatcher = get<CoroutineDispatcher>(named("DispatcherIo"))
       )
    }
 
@@ -166,9 +166,9 @@ val defModules: Module = module {
          _fetchSorted = get<PeopleUcFetchSorted>(),
          _personUc = get<IPersonUseCases>(),
          // _repository = get<IPersonRepository>(),
-         navHandler = navHandler,
+         _navHandler = navHandler,
          _validator = get<PersonValidator>()
-         //_ioDispatcher = get<CoroutineDispatcher>(named("IODispatcher"))
+         //_DispatcherIo = get<CoroutineDispatcher>(named("DispatcherIo"))
       )
    }
 }

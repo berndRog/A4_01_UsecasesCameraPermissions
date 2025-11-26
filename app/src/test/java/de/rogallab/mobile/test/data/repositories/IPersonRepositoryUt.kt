@@ -59,7 +59,9 @@ class IPersonRepositoryUt : KoinTest {
          fileName = fileName,
          ioDispatcher = mainRule.dispatcher() // StandardTestDispatcher als IO
       )
-      val koinApp = GlobalContext.startKoin { modules(testModule) }
+      val koinApp = GlobalContext.startKoin {
+         modules(testModule)
+      }
       val koin = koinApp.koin
       _seed = koin.get<Seed>()
       _dataStore = koin.get<IDataStore>()

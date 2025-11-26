@@ -148,7 +148,7 @@ abstract class BaseViewModel(
    // to new collectors, allowing the error to be shown immediately when a new observer
    // collects the flow (navigation case).
    private val _errorFlow: MutableSharedFlow<ErrorState?> =
-      MutableSharedFlow<ErrorState?>(replay = 1)
+      MutableSharedFlow(replay = 1)
    val errorFlow: Flow<ErrorState?> =
       _errorFlow.asSharedFlow()
 

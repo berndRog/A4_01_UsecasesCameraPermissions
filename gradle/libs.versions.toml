@@ -118,6 +118,7 @@ koin-android-test = { module = "io.insert-koin:koin-android-test",  version.ref 
 
 kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "kotlinCoroutines" }
 
+mockk = { module = "io.mockk:mockk", version.ref = "mockk" }
 mockk-android = { module = "io.mockk:mockk-android", version.ref = "mockk" }
 
 robolectric-test =  { module = "org.robolectric:robolectric",       version.ref = "robolectric" }

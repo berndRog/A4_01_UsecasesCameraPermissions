@@ -1,4 +1,4 @@
-package de.rogallab.mobile.ui.permissions
+package de.rogallab.mobile.ui.permissions.helpers
 
 import android.Manifest
 import android.annotation.SuppressLint
@@ -24,6 +24,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
+import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.google.android.gms.location.CurrentLocationRequest
 import com.google.android.gms.location.LocationServices
@@ -532,7 +533,7 @@ fun UpgradeToBackgroundLocationEntry(onReady: () -> Unit) {
  */
 fun Context.shouldShowRationale(permission: String): Boolean =
    (this as? Activity)?.let { activity ->
-      androidx.core.app.ActivityCompat
+      ActivityCompat
          .shouldShowRequestPermissionRationale(activity, permission)
    } ?: false
 

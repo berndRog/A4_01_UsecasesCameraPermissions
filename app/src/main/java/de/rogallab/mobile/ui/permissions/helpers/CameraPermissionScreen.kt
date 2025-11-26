@@ -1,6 +1,5 @@
-package de.rogallab.mobile.ui.permissions
+package de.rogallab.mobile.ui.permissions.helpers
 
-import android.Manifest
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
@@ -115,10 +114,10 @@ fun CameraPermissionScreen(
    if (askCamera) {
       RequirePermissions(
          PermissionRequestConfig(
-            permissions = arrayOf(Manifest.permission.CAMERA),
+            permissions = arrayOf(permission.CAMERA),
             onAllGranted = {
                askCamera = false
-            //   navHandler.push(CameraCapture)   // <-- Navigation 3
+               //   navHandler.push(CameraCapture)   // <-- Navigation 3
             },
             onDenied = { _, permanently ->
                askCamera = false

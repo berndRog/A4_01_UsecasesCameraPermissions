@@ -153,6 +153,9 @@ dependencies {
    testImplementation(libs.kotlinx.coroutines.test)
    testImplementation(libs.turbine.test)
 
+   // mockk
+   // testImplementation(libs.mockk.android)
+
    // Roboelectric
    testImplementation(libs.robolectric.test)
 

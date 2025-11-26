@@ -53,14 +53,17 @@ fun SelectAndShowImage(
             .padding(start = 8.dp),
          verticalArrangement = Arrangement.spacedBy(8.dp),
       ) {
+         // Select image from photos (gallery)
          GalSelectImage(
             onSelectImage = onSelectImage,
             onError = handleError
          )
 
+         // Request permission to use camera
          CamReqPermission(
             handleErrorEvent = handleError,
             onPermissionGranted = {
+               // Capture image with camera
                CamCapturePhoto(
                   onCaptureImage = onCaptureImage,
                   onError = handleError

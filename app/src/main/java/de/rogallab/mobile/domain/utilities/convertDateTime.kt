@@ -2,9 +2,11 @@
 
 package de.rogallab.mobile.domain.utilities
 
+import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.UtcOffset
+import kotlinx.datetime.number
 import kotlinx.datetime.offsetAt
 import kotlinx.datetime.toInstant
 import kotlinx.datetime.toLocalDateTime
@@ -236,8 +238,8 @@ fun LocalDateTime.toDateTimeString(
 private fun LocalDateTime.formatted(): DateTimeString =
    DateTimeString(
       year = this.date.year.toString(),
-      month = this.date.monthNumber.toString().padStart(2, '0'),
-      day = this.date.dayOfMonth.toString().padStart(2, '0'),
+      month = date.month.number.toString().padStart(2, '0'),
+      day = date.day.toString().padStart(2, '0'),
       dayOfWeek = this.date.dayOfWeek.name,
       hour = this.time.hour.toString().padStart(2, '0'),
       min = this.time.minute.toString().padStart(2, '0'),

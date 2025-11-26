@@ -4,7 +4,7 @@ import app.cash.turbine.test
 import de.rogallab.mobile.Globals
 import de.rogallab.mobile.data.IDataStore
 import de.rogallab.mobile.data.local.Seed
-import de.rogallab.mobile.domain.IPeopleUcFetchSorted
+import de.rogallab.mobile.domain.IPeopleUseCases
 import de.rogallab.mobile.domain.IPersonRepository
 import de.rogallab.mobile.domain.IPersonUseCases
 import de.rogallab.mobile.domain.entities.Person
@@ -47,7 +47,7 @@ class PeoplePersonUsecasesUt : KoinTest {
    private val directoryName = "test"
    private val fileName = "people.json"
 
-   private lateinit var _uc: IPeopleUcFetchSorted
+   private lateinit var _uc: IPeopleUseCases
    private lateinit var _seed: Seed
    private lateinit var _dataStore: IDataStore
    private lateinit var _repository: IPersonRepository
@@ -112,14 +112,14 @@ class PeoplePersonUsecasesUt : KoinTest {
    @Test
    fun ucFetchSorted_ok() = runTest {
       // arrange (expected sorted by firstName)
-      val useCase = get<IPeopleUcFetchSorted>()
+      val peopleUsesCases = get<IPeopleUseCases>()
 
       val selector = { p: Person -> p.firstName.lowercase() }
       _seedPeople.sortedBy(selector) // in-place sort of seed data to get expected result
       val expected = _seed.people.toList() // make a copy
 
       // act + assert
-      useCase.invoke().test {
+      peopleUsesCases.fetchSorted().test {
          val result = awaitItem()
          assertTrue(result.isSuccess)
          val actual = result.getOrThrow()
@@ -134,11 +134,11 @@ class PeoplePersonUsecasesUt : KoinTest {
    @Test
    fun ucFindById_ok() = runTest {
       // arrange: take a real seeded person id
-      val useCases = get<IPersonUseCases>()
+      val personUseCases = get<IPersonUseCases>()
       val expected: Person = _seedPeople.first()
       val id = expected.id
       // act/assert
-      val result = useCases.fetchById(id)
+      val result = personUseCases.fetchById(id)
       assertTrue(result.isSuccess)
       val actual = result.getOrThrow()
       assertEquals(expected, actual)
@@ -147,10 +147,10 @@ class PeoplePersonUsecasesUt : KoinTest {
    @Test
    fun ucCreate_ok() = runTest {
       // arrange: build a new person based on a seed template but new id
-      val useCases = get<IPersonUseCases>()
+      val personUseCases = get<IPersonUseCases>()
       val newPerson = Person("Bernd","Rogalla", "b-u.rogalla@ostfalia.de", "05862 988 61180")
       // act
-      val result = useCases.create(newPerson)
+      val result = personUseCases.create(newPerson)
       assertTrue(result.isSuccess)
       // assert: verify persistence through repository
       val resultFindByid = _repository.findById(newPerson.id)

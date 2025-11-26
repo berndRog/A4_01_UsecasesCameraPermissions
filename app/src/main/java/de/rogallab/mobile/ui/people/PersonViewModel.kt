@@ -2,7 +2,7 @@ package de.rogallab.mobile.ui.people
 
 import androidx.compose.material3.SnackbarDuration
 import androidx.lifecycle.viewModelScope
-import de.rogallab.mobile.domain.IPeopleUcFetchSorted
+import de.rogallab.mobile.domain.IPeopleUseCases
 import de.rogallab.mobile.domain.IPersonUseCases
 import de.rogallab.mobile.domain.entities.Person
 import de.rogallab.mobile.domain.utilities.logDebug
@@ -20,7 +20,7 @@ import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.launch
 
 class PersonViewModel(
-   private val _fetchSorted: IPeopleUcFetchSorted,
+   private val _peopleUc: IPeopleUseCases,
    private val _personUc: IPersonUseCases,
    private val _navHandler: INavHandler,
    private val _validator: PersonValidator
@@ -225,7 +225,7 @@ class PersonViewModel(
 // with the reactive Room-backed flow.
    private fun fetch() {
       viewModelScope.launch {
-         _fetchSorted()
+         _peopleUc.fetchSorted()
             // Runs once when the flow collection starts
             // (e.g. in init{} or when fetch() is explicitly called again).
             .onStart {

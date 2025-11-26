@@ -36,8 +36,8 @@ import com.google.android.gms.location.Priority
 import com.google.android.gms.tasks.CancellationTokenSource
 import de.rogallab.mobile.R
 import de.rogallab.mobile.domain.utilities.logVerbose
-import de.rogallab.mobile.ui.permissions.RequireCamera
-import de.rogallab.mobile.ui.permissions.RequireLocationWhileInUse
+import de.rogallab.mobile.ui.permissions.helpers.RequireCamera
+import de.rogallab.mobile.ui.permissions.helpers.RequireLocationWhileInUse
 
 /**
  * Requests CAMERA + while-in-use LOCATION and fetches a single GPS fix for geotagging.

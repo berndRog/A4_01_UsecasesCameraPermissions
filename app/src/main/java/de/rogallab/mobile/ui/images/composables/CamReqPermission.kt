@@ -28,7 +28,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import de.rogallab.mobile.R
 import de.rogallab.mobile.domain.utilities.logVerbose
-import de.rogallab.mobile.ui.permissions.RequireCamera
+import de.rogallab.mobile.ui.permissions.helpers.RequireCamera
 
 @Composable
 fun CamReqPermission(

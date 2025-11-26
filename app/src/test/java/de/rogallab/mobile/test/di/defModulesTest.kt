@@ -11,17 +11,17 @@ import de.rogallab.mobile.data.local.mediastore.MediaStore
 import de.rogallab.mobile.data.repositories.PersonRepository
 import de.rogallab.mobile.domain.IAppStorage
 import de.rogallab.mobile.domain.IMediaStore
-import de.rogallab.mobile.domain.IPeopleUcFetchSorted
+import de.rogallab.mobile.domain.IPeopleUseCases
 import de.rogallab.mobile.domain.IPersonRepository
 import de.rogallab.mobile.domain.IPersonUseCases
 import de.rogallab.mobile.domain.usecases.people.PeopleUcFetchSorted
+import de.rogallab.mobile.domain.usecases.people.PeopleUseCases
 import de.rogallab.mobile.domain.usecases.person.PersonUcCreate
 import de.rogallab.mobile.domain.usecases.person.PersonUcFetchById
 import de.rogallab.mobile.domain.usecases.person.PersonUcRemove
 import de.rogallab.mobile.domain.usecases.person.PersonUcUpdate
 import de.rogallab.mobile.domain.usecases.person.PersonUseCases
 import de.rogallab.mobile.domain.utilities.logInfo
-import de.rogallab.mobile.domain.utilities.newUuid
 import de.rogallab.mobile.ui.navigation.INavHandler
 import de.rogallab.mobile.ui.navigation.Nav3ViewModel
 import de.rogallab.mobile.ui.navigation.PeopleList
@@ -46,6 +46,7 @@ fun defModulesTest(
       ioDispatcher  // testDispatcher
    }
 
+   //== data modules ===============================================================================
    logInfo(tag, "test single    -> ApplicationProvider.getApplicationContext()")
    single<Context> {
       ApplicationProvider.getApplicationContext()
@@ -95,11 +96,18 @@ fun defModulesTest(
       )
    }
 
-   // domain modules
-   // UseCases
-   logInfo(tag, "single    -> PeopleUcFetch")
-   single<IPeopleUcFetchSorted> {
+   //== domain modules =============================================================================
+   // People UseCases
+   logInfo(tag, "single    -> PeopleUcFetchSorted")
+   single<PeopleUcFetchSorted> {
       PeopleUcFetchSorted(get<IPersonRepository>())
+   }
+   // Aggregation
+   logInfo(tag, "single    -> PeopleUseCases: IPeopleUseCases")
+   single<IPeopleUseCases> {
+      PeopleUseCases(
+         fetchSorted = get<PeopleUcFetchSorted>()
+      )
    }
 
    // single PersonUseCases
@@ -122,8 +130,7 @@ fun defModulesTest(
       )
    }
 
-
-   // ui modules
+   //== ui modules =================================================================================
    logInfo(tag, "test single    -> PersonValidator")
    single<PersonValidator> {
       PersonValidator(
@@ -143,7 +150,7 @@ fun defModulesTest(
    logInfo(tag, "viewModel -> PersonViewModel")
    factory { (navHandler: INavHandler) ->
       PersonViewModel(
-         _fetchSorted = get<IPeopleUcFetchSorted>(),
+         _peopleUc = get<IPeopleUseCases>(),
          _personUc = get<IPersonUseCases>(),
          _navHandler = navHandler,
          _validator = get<PersonValidator>()

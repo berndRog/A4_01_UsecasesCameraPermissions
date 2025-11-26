@@ -1,4 +1,4 @@
-package de.rogallab.mobile.ui.permissions
+package de.rogallab.mobile.ui.permissions.helpers
 
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button

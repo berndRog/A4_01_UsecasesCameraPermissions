@@ -5,7 +5,7 @@ import androidx.navigation3.runtime.NavKey
 import app.cash.turbine.test
 import de.rogallab.mobile.data.IDataStore
 import de.rogallab.mobile.data.local.Seed
-import de.rogallab.mobile.domain.IPeopleUcFetchSorted
+import de.rogallab.mobile.domain.IPeopleUseCases
 import de.rogallab.mobile.domain.IPersonRepository
 import de.rogallab.mobile.domain.entities.Person
 import de.rogallab.mobile.test.MainDispatcherRule
@@ -56,7 +56,7 @@ class PersonViewModelIntegrationTest : KoinTest {
    private val fileName = "people.json"
 
    private lateinit var _context: Context
-   private lateinit var _uc: IPeopleUcFetchSorted
+   private lateinit var _uc: IPeopleUseCases
    private lateinit var _seed: Seed
    private lateinit var _dataStore: IDataStore
    private lateinit var _repository: IPersonRepository

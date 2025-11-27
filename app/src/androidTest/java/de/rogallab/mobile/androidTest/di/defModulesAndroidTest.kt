@@ -36,7 +36,9 @@ import org.koin.dsl.module
 
 
 fun defModulesAndroidTest(
-   appHomePath: String,
+   appHomeName: String,
+   directoryName: String,
+   fileName: String,
    ioDispatcher: CoroutineDispatcher
 ): Module = module {
    val tag = "<-defModulesTest"
@@ -64,8 +66,8 @@ fun defModulesAndroidTest(
    logInfo(tag, "test single    -> DataStore: DataStore")
    single<IDataStore> {
       DataStore(
-         appHomeName = appHomePath,
-         directoryName = "androidTest",
+         appHomeName = appHomeName,
+         directoryName = directoryName,
          fileName = "testPeople_${newUuid()}",
          _context = get<Context>(),
          _seed = get<Seed>(),

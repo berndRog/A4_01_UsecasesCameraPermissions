@@ -154,7 +154,10 @@ dependencies {
    testImplementation(libs.turbine.test)
 
    // mockk
-   // testImplementation(libs.mockk.android)
+   testImplementation(libs.mockk){
+      exclude(group = "org.junit.jupiter")
+      exclude(group = "org.junit.platform")
+   }
 
    // Roboelectric
    testImplementation(libs.robolectric.test)
@@ -180,9 +183,6 @@ dependencies {
    androidTestImplementation(platform(libs.androidx.compose.bom))
    androidTestImplementation(libs.androidx.ui.test.junit4)
 
-   // Navigation Testing
-   // androidTestImplementation(libs.androidx.navigation.testing)
-
    // Room Testing
    androidTestImplementation(libs.androidx.room.testing)
    androidTestImplementation(libs.androidx.arch.core.testing)
@@ -196,7 +196,7 @@ dependencies {
    // Espresso To use the androidx.test.espresso
    androidTestImplementation(libs.androidx.test.espresso.core)
 
-   // Mockk
+   // Mockk-Android
    androidTestImplementation(libs.mockk.android) {
       exclude(group = "org.junit.jupiter")
       exclude(group = "org.junit.platform")

@@ -172,7 +172,7 @@ val defModules: Module = module {
    logInfo(tag, "viewModel -> PersonViewModel")
    viewModel { (navHandler: INavHandler) ->
       PersonViewModel(
-         _peopleUc = get<PeopleUseCases>(),
+         _peopleUc = get<IPeopleUseCases>(),
          _personUc = get<IPersonUseCases>(),
          _navHandler = navHandler,
          _validator = get<PersonValidator>()

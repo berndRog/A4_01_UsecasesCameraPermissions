@@ -18,6 +18,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.*
+import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.context.GlobalContext.stopKoin
@@ -35,7 +36,14 @@ import kotlin.test.assertTrue
 class PersonViewModelAndroidIntegrationTest : KoinTest {
 
    @get:Rule
+   val tempDir = TemporaryFolder()
+
+   @get:Rule
    val mainDispatcherRule = MainDispatcherRule()
+
+   // parameters for tests
+   private val directoryName = "test"
+   private val fileName = "people.json"
 
    // DI
    private val _dataStore: IDataStore by inject()
@@ -52,10 +60,14 @@ class PersonViewModelAndroidIntegrationTest : KoinTest {
       stopKoin()
       startKoin {
          androidContext(InstrumentationRegistry.getInstrumentation().targetContext)
-         modules(defModulesAndroidTest(
-            appHomePath = "",
-            ioDispatcher = mainDispatcherRule.testDispatcher
-         ))
+         modules(
+            defModulesAndroidTest(
+               appHomeName = tempDir.root.absolutePath,
+               directoryName = directoryName,
+               fileName = fileName,
+               ioDispatcher = mainDispatcherRule.testDispatcher
+            )
+         )
       }
 
       // reduce noise

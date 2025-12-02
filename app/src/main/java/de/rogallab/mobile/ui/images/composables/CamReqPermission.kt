@@ -40,7 +40,7 @@ fun CamReqPermission(
 ) {
    val tag = "<-CamCheckPermission"
    val nComp = remember { mutableIntStateOf(1) }
-   SideEffect { logVerbose(tag, "Composition #${nComp.value++}") }
+   SideEffect { logVerbose(tag, "Composition #${nComp.intValue++}") }
 
    val context = LocalContext.current
    var hasCameraPermission by remember {

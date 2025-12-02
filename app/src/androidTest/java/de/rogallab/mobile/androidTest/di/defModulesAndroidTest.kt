@@ -133,7 +133,7 @@ fun defModulesAndroidTest(
    logInfo(tag, "single    -> PersonUcRemove")
    single { PersonUcRemove(get<IPersonRepository>()) }
    // Aggregation
-   logInfo(tag, "single    -> PersonUseCasesc: IPersonUseCases")
+   logInfo(tag, "single    -> PersonUseCases: IPersonUseCases")
    single<IPersonUseCases> {
       PersonUseCases(
          fetchById = get<PersonUcFetchById>(),

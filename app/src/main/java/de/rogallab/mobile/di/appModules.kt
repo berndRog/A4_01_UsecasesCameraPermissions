@@ -7,9 +7,9 @@ import de.rogallab.mobile.data.local.appstorage.AppStorage
 import de.rogallab.mobile.data.local.datastore.DataStore
 import de.rogallab.mobile.data.local.mediastore.AppMediaStore
 import de.rogallab.mobile.data.repositories.PersonRepository
+import de.rogallab.mobile.domain.IAppMediaStore
 import de.rogallab.mobile.domain.IAppStorage
 import de.rogallab.mobile.domain.IImageUseCases
-import de.rogallab.mobile.domain.IAppMediaStore
 import de.rogallab.mobile.domain.IPeopleUseCases
 import de.rogallab.mobile.domain.IPersonRepository
 import de.rogallab.mobile.domain.IPersonUseCases
@@ -33,7 +33,7 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.module.Module
-import org.koin.core.module.dsl.viewModel      // für viewModel { ... }
+import org.koin.core.module.dsl.viewModel
 import org.koin.core.qualifier.named
 import org.koin.dsl.bind
 import org.koin.dsl.module

@@ -29,7 +29,7 @@ fun SelectAndShowImage(
 ) {
    val tag = "<-SelectAndShowImage"
    val nComp = remember { mutableIntStateOf(1) }
-   SideEffect { logComp(tag, "Composition #${nComp.value++}") }
+   SideEffect { logComp(tag, "Composition #${nComp.intValue++}") }
 
    Row(modifier = Modifier
       .padding(vertical = 8.dp)

@@ -35,7 +35,7 @@ fun PersonContent(
 ) {
    val tag = "<-PersonContent"
    val nComp = remember { mutableIntStateOf(1) }
-   SideEffect { logComp(tag, "Composition #${nComp.value++}") }
+   SideEffect { logComp(tag, "Composition #${nComp.intValue++}") }
 
    Column {
       InputValueString(

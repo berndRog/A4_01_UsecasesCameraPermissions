@@ -22,7 +22,7 @@ import kotlinx.coroutines.withContext
 import java.util.UUID
 
 /**
- * Data-layer implementation of [IMediaStore] that encapsulates all interaction
+ * Data-layer implementation of [IAppMediaStore] that encapsulates all interaction
  * with Android's MediaStore API.
  *
  * All heavy I/O work (queries, inserts, deletes, bitmap decoding, file I/O)

@@ -39,7 +39,7 @@ fun CamCapturePhoto(
 ) {
    val tag = "<-CamCapturePhoto"
    val nComp = remember { mutableIntStateOf(1) }
-   SideEffect { logComp(tag, "Composition #${nComp.value++}") }
+   SideEffect { logComp(tag, "Composition #${nComp.intValue++}") }
 
    val context = LocalContext.current
    var imageUri by remember { mutableStateOf<Uri?>(null) }

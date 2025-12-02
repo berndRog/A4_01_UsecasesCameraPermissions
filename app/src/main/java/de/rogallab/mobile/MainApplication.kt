@@ -20,7 +20,6 @@ class MainApplication : Application() {
 
 
    private val _dataStore: IDataStore by inject()
-
    private val _appScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
    override fun onCreate() {
@@ -40,7 +39,6 @@ class MainApplication : Application() {
       _appScope.launch {
          _dataStore.initialize()
       }
-
    }
 
    companion object {

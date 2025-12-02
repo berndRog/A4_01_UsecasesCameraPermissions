@@ -31,7 +31,7 @@ fun PersonDetailScreen(
 ) {
    val tag = "<-PersonDetailScreen"
    val nComp = remember { mutableIntStateOf(1) }
-   SideEffect { logComp(tag, "Composition #${nComp.value++}") }
+   SideEffect { logComp(tag, "Composition #${nComp.intValue++}") }
 
    val groupName = Globals.fileName.split(".").first()
 

@@ -18,7 +18,6 @@ abstract class BaseViewModel(
    private val _tag: String = "<-BaseViewModel"
 ): ViewModel() {
 
-
    // handle undo event
    fun handleUndoEvent(errorState: ErrorState) {
       logError(_tag, "handleUndoEvent ${errorState.message}")
@@ -32,7 +31,7 @@ abstract class BaseViewModel(
    // to new collectors, allowing the error to be shown immediately when a new observer
    // collects the flow (navigation case).
    private val _errorFlow: MutableSharedFlow<ErrorState?> =
-      MutableSharedFlow(replay = 1)
+      MutableSharedFlow<ErrorState?>(replay = 1)
    val errorFlow: Flow<ErrorState?> =
       _errorFlow.asSharedFlow()
 

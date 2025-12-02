@@ -55,7 +55,7 @@ fun PeopleListScreen(
 ) {
    val tag = "<-PeopleListScreen"
    val nComp = remember { mutableIntStateOf(1) }
-   SideEffect { logComp(tag, "Composition #${nComp.value++}") }
+   SideEffect { logComp(tag, "Composition #${nComp.intValue++}") }
 
    // observe the peopleUiStateFlow in the ViewModel
    val peopleUiState: PeopleUiState = CollectBy(viewModel.peopleUiStateFlow, tag)

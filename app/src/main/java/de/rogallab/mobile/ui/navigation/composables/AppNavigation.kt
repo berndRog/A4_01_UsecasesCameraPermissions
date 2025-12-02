@@ -39,7 +39,7 @@ fun AppNavigation(
 ) {
    val tag = "<-AppNavigation"
    val nComp = remember { mutableIntStateOf(1) }
-   SideEffect { logComp(tag, "Composition #${nComp.value++}") }
+   SideEffect { logComp(tag, "Composition #${nComp.intValue++}") }
 
    // Use the navViewModel's backStack to manage navigation state
    val backStack = navViewModel.backStack

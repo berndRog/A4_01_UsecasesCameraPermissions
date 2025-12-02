@@ -34,7 +34,7 @@ fun GalSelectImage(
 ) {
    val tag = "<-GalSelectImage"
    val nComp = remember { mutableIntStateOf(1) }
-   SideEffect { logComp(tag, "Composition #${nComp.value++}") }
+   SideEffect { logComp(tag, "Composition #${nComp.intValue++}") }
 
    // callback
    val launcher = rememberLauncherForActivityResult(

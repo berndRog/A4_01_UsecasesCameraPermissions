@@ -291,7 +291,7 @@ fun EnsureLocationFgServiceReady(
    onReady: () -> Unit,
    onDenied: (permanently: Boolean) -> Unit = {}
 ) {
-   var step by remember { mutableStateOf(0) } // 0: notifications, 1: location
+   var step by remember { mutableIntStateOf(0) } // 0: notifications, 1: location
 
    when (step) {
       0 ->

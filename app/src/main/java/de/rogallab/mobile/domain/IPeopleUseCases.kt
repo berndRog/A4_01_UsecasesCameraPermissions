@@ -5,5 +5,3 @@ import de.rogallab.mobile.domain.usecases.people.PeopleUcFetchSorted
 interface IPeopleUseCases {
    val fetchSorted: PeopleUcFetchSorted
 }
-
-

@@ -2,6 +2,8 @@ package de.rogallab.mobile.ui.images.composables
 
 import android.Manifest
 import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -10,6 +12,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -47,13 +50,70 @@ fun CamReqPermission(
       )
    }
 
-//   val launcher = rememberLauncherForActivityResult(
-//      contract = ActivityResultContracts.RequestPermission()
-//   ) { isGranted ->
-//      logVerbose(tag, "isGranted: $isGranted")
-//      hasCameraPermission = isGranted
-//      if (!isGranted) handleErrorEvent("Camera permission denied")
-//   }
+   val launcher = rememberLauncherForActivityResult(
+      contract = ActivityResultContracts.RequestPermission()
+   ) { isGranted ->
+      logVerbose(tag, "isGranted: $isGranted")
+      hasCameraPermission = isGranted
+      if (!isGranted) handleErrorEvent("Camera permission denied")
+   }
+
+   if (hasCameraPermission) {
+
+      onPermissionGranted()
+
+   } else {
+
+      Button(
+         onClick = {
+            logVerbose(tag, "onclick -> launcher.launch")
+            launcher.launch(Manifest.permission.CAMERA)
+         },
+         modifier = Modifier.fillMaxWidth(),
+         colors = ButtonDefaults.buttonColors(
+            containerColor = MaterialTheme.colorScheme.error,
+            contentColor = MaterialTheme.colorScheme.onError
+         )
+      ) {
+         Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.Start,
+            verticalAlignment = Alignment.CenterVertically
+         ) {
+            val text = stringResource(R.string.permissionCamera)
+            Icon(
+               //imageVector = Icons.Default.PhotoCamera,
+               imageVector = Icons.Default.Settings,
+               contentDescription = text
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+               text = text,
+               style = MaterialTheme.typography.labelLarge
+            )
+         }
+      } // button
+   }
+}
+
+/*
+// using PermissionHelper
+@Composable
+fun CamReqPermission(
+   handleErrorEvent: (String) -> Unit,
+   onPermissionGranted: @Composable () -> Unit
+) {
+   val tag = "<-CamCheckPermission"
+   val nComp = remember { mutableIntStateOf(1) }
+   SideEffect { logVerbose(tag, "Composition #${nComp.value++}") }
+
+   val context = LocalContext.current
+   var hasCameraPermission by remember {
+      mutableStateOf(
+         ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA)
+            == PackageManager.PERMISSION_GRANTED
+      )
+   }
 
    var ask by remember { mutableStateOf(false) }
 
@@ -105,3 +165,4 @@ fun CamReqPermission(
       }
    }
 }
+*/

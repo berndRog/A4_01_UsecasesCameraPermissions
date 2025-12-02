@@ -21,8 +21,8 @@ interface IAppStorage {
    ): Uri?
 
 
-   suspend fun loadImageFromAppStorage(uri: Uri): Bitmap?
+   suspend fun loadImage(uri: Uri): Bitmap?
 
-   suspend fun deleteImageOnAppStorage(pathName:String): Unit
+   suspend fun deleteImage(pathName:String): Unit
 
 }

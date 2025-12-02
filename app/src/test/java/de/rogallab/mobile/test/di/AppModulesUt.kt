@@ -6,7 +6,7 @@ import de.rogallab.mobile.data.local.Seed
 import de.rogallab.mobile.di.defModules
 import de.rogallab.mobile.domain.IAppStorage
 import de.rogallab.mobile.domain.IImageUseCases
-import de.rogallab.mobile.domain.IMediaStore
+import de.rogallab.mobile.domain.IAppMediaStore
 import de.rogallab.mobile.domain.IPeopleUseCases
 import de.rogallab.mobile.domain.IPersonRepository
 import de.rogallab.mobile.domain.IPersonUseCases
@@ -16,7 +16,7 @@ import de.rogallab.mobile.domain.usecases.people.PeopleUcFetchSorted
 import de.rogallab.mobile.domain.usecases.person.PersonUcCreate
 import de.rogallab.mobile.domain.usecases.person.PersonUcFetchById
 import de.rogallab.mobile.domain.usecases.person.PersonUcRemove
-import de.rogallab.mobile.domain.usecases.person.PersonUcUpdate
+import de.rogallab.mobile.domain.usecases.person.PersonUcUpdateWithLocalImage
 import de.rogallab.mobile.test.TestApplication
 import de.rogallab.mobile.ui.people.PersonValidator
 import kotlinx.coroutines.CoroutineDispatcher
@@ -51,7 +51,7 @@ class AppModulesUt : KoinTest {
 
    private val appStorage: IAppStorage by inject()
    private val dataStore: IDataStore by inject()
-   private val mediaStore: IMediaStore by inject()
+   private val mediaStore: IAppMediaStore by inject()
 
    private val personRepository: IPersonRepository by inject()
 
@@ -60,7 +60,7 @@ class AppModulesUt : KoinTest {
 
    private val personUcFetchById: PersonUcFetchById by inject()
    private val personUcCreate: PersonUcCreate by inject()
-   private val personUcUpdate: PersonUcUpdate by inject()
+   private val personUcUpdate: PersonUcUpdateWithLocalImage by inject()
    private val personUcRemove: PersonUcRemove by inject()
    private val personUseCases: IPersonUseCases by inject()
 

@@ -15,7 +15,6 @@ import de.rogallab.mobile.R
 import de.rogallab.mobile.domain.utilities.logComp
 import de.rogallab.mobile.ui.base.composables.CollectBy
 import de.rogallab.mobile.ui.errors.ErrorHandler
-import de.rogallab.mobile.ui.images.ImageViewModel
 import de.rogallab.mobile.ui.people.PeopleIntent
 import de.rogallab.mobile.ui.people.PersonIntent
 import de.rogallab.mobile.ui.people.PersonUiState
@@ -28,7 +27,6 @@ import org.koin.compose.koinInject
 fun PersonDetailScreen(
    id: String,
    viewModel: PersonViewModel,
-   imageViewModel: ImageViewModel,
    onNavigateReverse: () -> Unit = {},
 ) {
    val tag = "<-PersonDetailScreen"
@@ -88,28 +86,14 @@ fun PersonDetailScreen(
             personUiState = personUiState,
             validator = koinInject<PersonValidator>(),
             //imageLoader = koinInject(),
-            onFirstNameChange = {
-               viewModel.handlePersonIntent(PersonIntent.FirstNameChange(it))
-            },
-            onLastNameChange = {
-               viewModel.handlePersonIntent(PersonIntent.LastNameChange(it))
-            },
-            onEmailChange = {
-               viewModel.handlePersonIntent(PersonIntent.EmailChange(it))
-            },
-            onPhoneChange = {
-               viewModel.handlePersonIntent(PersonIntent.PhoneChange(it))
-            },
-            onSelectImage = {
-               imageViewModel.selectImage(it, groupName) { uriString ->
-                  viewModel.handlePersonIntent(PersonIntent.ImagePathChange(uriString))
-               }
-            },
-            onCaptureImage = {
-               imageViewModel.captureImage(it, groupName) { uriString ->
-                  viewModel.handlePersonIntent(PersonIntent.ImagePathChange(uriString))
-               }
-            },
+            onFirstNameChange = { viewModel.handlePersonIntent(PersonIntent.FirstNameChange(it)) },
+            onLastNameChange = { viewModel.handlePersonIntent(PersonIntent.LastNameChange(it)) },
+            onEmailChange = { viewModel.handlePersonIntent(PersonIntent.EmailChange(it)) },
+            onPhoneChange = { viewModel.handlePersonIntent(PersonIntent.PhoneChange(it)) },
+            onSelectImage = { uriString ->
+               viewModel.handlePersonIntent(PersonIntent.SelectImage(uriString, groupName)) },
+            onCaptureImage = { uriString ->
+               viewModel.handlePersonIntent(PersonIntent.CaptureImage(uriString, groupName)) },
             handleError = { message ->
                message?.let {
                   viewModel.handlePersonIntent(PersonIntent.ErrorEvent(it))

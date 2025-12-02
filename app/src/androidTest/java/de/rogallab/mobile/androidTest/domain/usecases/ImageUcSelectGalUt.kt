@@ -1,14 +1,16 @@
 package de.rogallab.mobile.androidTest.domain.usecases
 
 import android.net.Uri
+import de.rogallab.mobile.domain.IAppMediaStore
 import de.rogallab.mobile.domain.IAppStorage
-import de.rogallab.mobile.domain.IMediaStore
 import de.rogallab.mobile.domain.exceptions.IoException
 import de.rogallab.mobile.domain.usecases.images.ImageUcSelectGal
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Test
-import kotlin.test.*
+import kotlin.test.assertEquals
+import kotlin.test.assertIs
+import kotlin.test.assertTrue
 
 class ImageUcSelectGalUt {
 
@@ -106,18 +108,16 @@ class ImageUcSelectGalUt {
 
    // region Fakes
 
-   private class FakeMediaStore : IMediaStore {
+   private class FakeMediaStore : IAppMediaStore {
       var convertResult: Uri? = null
       var lastSourceUri: Uri? = null
       var lastGroupName: String? = null
 
-      override fun createSessionFolder(): String = "dummy"
-
-      override fun createGroupedImageUri(groupName: String, filename: String?): Uri? = null
+      override suspend fun createGroupedImageUri(groupName: String, filename: String?): Uri? = null
 
       override suspend fun saveImageToMediaStore(groupName: String, sourceUri: Uri): Uri? = null
 
-      override fun deleteImageGroup(groupName: String): Int = 0
+      override suspend fun deleteImageGroup(groupName: String): Int = 0
 
       override suspend fun convertDrawableToMediaStore(
          drawableId: Int,
@@ -150,9 +150,9 @@ class ImageUcSelectGalUt {
          uuidString: String?
       ): Uri? = null
 
-      override suspend fun loadImageFromAppStorage(uri: Uri) = null
+      override suspend fun loadImage(uri: Uri) = null
 
-      override suspend fun deleteImageOnAppStorage(pathName: String) {}
+      override suspend fun deleteImage(pathName: String) {}
    }
 
    // endregion

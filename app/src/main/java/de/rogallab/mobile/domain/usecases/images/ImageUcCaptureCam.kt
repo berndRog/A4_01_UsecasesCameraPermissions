@@ -4,11 +4,11 @@ import android.net.Uri
 import androidx.core.net.toUri
 import de.rogallab.mobile.Globals
 import de.rogallab.mobile.domain.IAppStorage
-import de.rogallab.mobile.domain.IMediaStore
+import de.rogallab.mobile.domain.IAppMediaStore
 import de.rogallab.mobile.domain.exceptions.IoException
 
 class ImageUcCaptureCam(
-   private val _mediaStore: IMediaStore,
+   private val _mediaStore: IAppMediaStore,
    private val _appStorage: IAppStorage
 ) {
    suspend operator fun invoke(capturedImageUriString: String, groupName: String): Result<Uri> {

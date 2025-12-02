@@ -1,4 +1,4 @@
-package de.rogallab.mobile.test.data.mediastore
+package de.rogallab.mobile.androidTest.data.mediastore
 
 import android.Manifest
 import android.R
@@ -15,9 +15,10 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.rule.GrantPermissionRule
 import de.rogallab.mobile.Globals
-import de.rogallab.mobile.data.local.mediastore.MediaStore as MediaStoreImpl
+import de.rogallab.mobile.data.local.mediastore.AppMediaStore
+import de.rogallab.mobile.domain.IAppMediaStore
 import de.rogallab.mobile.domain.IAppStorage
-import de.rogallab.mobile.domain.IMediaStore
+import de.rogallab.mobile.domain.utilities.newUuid
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
@@ -29,12 +30,12 @@ import java.util.UUID
 import kotlin.test.*
 
 @RunWith(AndroidJUnit4::class)
-class IMediaStoreAndroidTest {
+class IAppMediaStoreAndroidTest {
 
    @get:Rule
    val permissionRule: GrantPermissionRule = GrantPermissionRule.grant(
-      // Abhängig von deiner targetSdk sind nicht alle nötig / erlaubt,
-      // aber so hast du für Tests maximale Freiheit:
+      // Depending on targetSdk some of these might be deprecated,
+      // but for instrumentation tests this is usually acceptable:
       Manifest.permission.READ_EXTERNAL_STORAGE,
       Manifest.permission.WRITE_EXTERNAL_STORAGE,
       Manifest.permission.READ_MEDIA_IMAGES
@@ -42,7 +43,7 @@ class IMediaStoreAndroidTest {
 
    private lateinit var _context: Context
    private lateinit var _resolver: ContentResolver
-   private lateinit var _mediaStore: IMediaStore
+   private lateinit var _mediaStore: IAppMediaStore
 
    @Before
    fun setup() {
@@ -52,34 +53,24 @@ class IMediaStoreAndroidTest {
 
       _context = ApplicationProvider.getApplicationContext()
       _resolver = _context.contentResolver
-      _mediaStore = MediaStoreImpl(_context, Dispatchers.IO)
+      _mediaStore = AppMediaStore(_context, Dispatchers.IO)
    }
 
-   //region createSessionFolder / createGroupedImageUri
+   //region GroupedImages
    @Test
-   fun createSessionFolder_pattern_ok() {
-      // act
-      val folder = _mediaStore.createSessionFolder()
-
-      // assert – A4_01_yyyyMMdd_HHmm
-      val regex = Regex("""A4_01_\d{8}_\d{4}""")
-      assertTrue(regex.matches(folder), "Folder '$folder' should match pattern A4_01_yyyyMMdd_HHmm")
-   }
-
-   @Test
-   fun createGroupedImageUri_createsEntry_ok() {
+   fun createGroupedImageUri_createsEntry_ok() = runBlocking {
       // arrange
       val groupName = "TestGroupCreateUri"
       val fileName = "test_image_${System.currentTimeMillis()}"
 
-      // act
+      // act (suspend call)
       val uri = _mediaStore.createGroupedImageUri(groupName, fileName)
 
       // assert
       assertNotNull(uri, "Uri must not be null")
       assertEquals("content", uri.scheme)
 
-      // und: Eintrag im MediaStore vorhanden?
+      // and: is the row actually present in MediaStore?
       _resolver.query(
          uri,
          arrayOf(
@@ -101,8 +92,12 @@ class IMediaStoreAndroidTest {
    //region loadBitmap
    @Test
    fun loadBitmap_fromMediaStore_ok() = runBlocking {
-      // arrange: echtes Bild in MediaStore schreiben
-      val uri = insertTestBitmapIntoMediaStore(groupName = "LoadBitmapGroup", width = 10, height = 15)
+      // arrange: write a real test image into MediaStore
+      val uri = insertTestBitmapIntoMediaStore(
+         groupName = "LoadBitmapGroup",
+         width = 10,
+         height = 15
+      )
 
       // act
       val bitmap = _mediaStore.loadBitmap(uri)
@@ -125,7 +120,7 @@ class IMediaStoreAndroidTest {
    //region saveImageToMediaStore
    @Test
    fun saveImageToMediaStore_ok() = runBlocking {
-      // arrange: Quelle ist ein echtes MediaStore-Bild
+      // arrange: source is an actual MediaStore image
       val sourceUri = insertTestBitmapIntoMediaStore(
          groupName = "SourceGroupForSave",
          width = 16,
@@ -140,7 +135,7 @@ class IMediaStoreAndroidTest {
       assertNotNull(savedUri, "Saved uri must not be null")
       assertEquals("content", savedUri.scheme)
 
-      // und: Bild ist lesbar
+      // and: saved image is readable
       val savedBitmap = _mediaStore.loadBitmap(savedUri)
       assertNotNull(savedBitmap, "Saved bitmap must be readable")
       savedBitmap.recycle()
@@ -150,16 +145,19 @@ class IMediaStoreAndroidTest {
    //region deleteImageGroup
    @Test
    fun deleteImageGroup_deletesImages_ok() = runBlocking {
-      // arrange – mehrere Bilder in einer Gruppe anlegen
+      // arrange – insert several images into the same group
       val groupName = "DeleteGroupTest"
       repeat(3) {
          insertTestBitmapIntoMediaStore(groupName = groupName, width = 8, height = 8)
       }
 
       val countBefore = countImagesInGroup(groupName)
-      assertTrue(countBefore >= 3, "There should be at least 3 images before deleting (was $countBefore)")
+      assertTrue(
+         countBefore >= 3,
+         "There should be at least 3 images before deleting (was $countBefore)"
+      )
 
-      // act
+      // act (suspend call)
       val deleted = _mediaStore.deleteImageGroup(groupName)
 
       // assert
@@ -175,7 +173,7 @@ class IMediaStoreAndroidTest {
       // arrange
       val groupName = "DrawableGroup"
       val drawableId = R.drawable.ic_menu_camera
-      val uuidString = "drawable_test_uuid"
+      val uuidString = newUuid().toString()
 
       // act
       val uri = _mediaStore.convertDrawableToMediaStore(
@@ -188,7 +186,7 @@ class IMediaStoreAndroidTest {
       assertNotNull(uri, "Uri must not be null after converting drawable to MediaStore")
       assertEquals("content", uri!!.scheme)
 
-      // und: Bild ist tatsächlich lesbar
+      // and: resulting image is readable
       val bitmap = _mediaStore.loadBitmap(uri)
       assertNotNull(bitmap, "Bitmap from drawable conversion must be readable")
       bitmap.recycle()
@@ -200,7 +198,7 @@ class IMediaStoreAndroidTest {
 
    @Test
    fun convertMediaStoreToAppStorage_copiesFile_ok() = runBlocking {
-      // arrange: Bild im MediaStore
+      // arrange: image in MediaStore
       val groupName = "AppStorageGroup"
       val sourceUri = insertTestBitmapIntoMediaStore(
          groupName = "SourceForAppStorage",
@@ -228,17 +226,16 @@ class IMediaStoreAndroidTest {
 
    //endregion
 
-   //region Hilfsfunktionen
+   //region helper functions
 
    /**
-    * Schreibt ein kleines Bitmap in den MediaStore (Pictures/<groupName>) und
-    * gibt die Uri zurück.
+    * Writes a small bitmap into MediaStore (Pictures/<groupName>) and returns its Uri.
     */
-   private fun insertTestBitmapIntoMediaStore(
+   private suspend fun insertTestBitmapIntoMediaStore(
       groupName: String,
       width: Int,
       height: Int
-   ): Uri = runBlocking {
+   ): Uri = withContext(Dispatchers.IO) {
       val values = ContentValues().apply {
          put(
             MediaStore.Images.Media.DISPLAY_NAME,
@@ -259,13 +256,13 @@ class IMediaStoreAndroidTest {
          values
       ) ?: throw IOException("Failed to insert test bitmap into MediaStore")
 
-      // Bitmap erzeugen
+      // Create a simple test bitmap
       val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888).apply {
          val canvas = Canvas(this)
          canvas.drawARGB(255, 255, 0, 0)
       }
 
-      // Bitmap in MediaStore schreiben
+      // Write bitmap to MediaStore
       _resolver.openOutputStream(uri)?.use { out ->
          bitmap.compress(Bitmap.CompressFormat.JPEG, 90, out)
       } ?: throw IOException("Failed to open output stream for test bitmap")
@@ -279,7 +276,7 @@ class IMediaStoreAndroidTest {
          _resolver.update(uri, done, null, null)
       }
 
-      return@runBlocking uri
+      return@withContext uri
    }
 
    private fun countImagesInGroup(groupName: String): Int {
@@ -304,8 +301,8 @@ class IMediaStoreAndroidTest {
    }
 
    /**
-    * Einfache Fake-Implementierung von IAppStorage nur für Tests.
-    * Kopiert ein Bild aus dem MediaStore in das private filesDir.
+    * Simple fake implementation of IAppStorage for tests.
+    * Copies an image from MediaStore into the private filesDir.
     */
    private class FakeAppStorage(
       private val context: Context
@@ -332,24 +329,21 @@ class IMediaStoreAndroidTest {
          return@withContext Uri.fromFile(destFile)
       }
 
-      // --- Dummy Implementationen ---
+      // --- Dummy implementations not needed for this test suite ---
 
       override suspend fun convertDrawableToAppStorage(
          drawableId: Int,
          pathName: String,
          uuidString: String?
       ): Uri? = withContext(Dispatchers.IO) {
-         // Für AndroidTest nicht relevant → Dummy-Implementation
          null
       }
 
-      override suspend fun loadImageFromAppStorage(uri: Uri): Bitmap? = withContext(Dispatchers.IO) {
-         // Dummy: wir müssen kein echtes Bitmap laden
+      override suspend fun loadImage(uri: Uri): Bitmap? = withContext(Dispatchers.IO) {
          null
       }
 
-      override suspend fun deleteImageOnAppStorage(pathName: String) = withContext(Dispatchers.IO) {
-         // Dummy: einfach nichts tun
+      override suspend fun deleteImage(pathName: String) = withContext(Dispatchers.IO) {
          Unit
       }
    }

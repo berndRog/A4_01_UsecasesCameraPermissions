@@ -3,11 +3,11 @@ package de.rogallab.mobile.domain.usecases.images
 import android.net.Uri
 import androidx.core.net.toUri
 import de.rogallab.mobile.domain.IAppStorage
-import de.rogallab.mobile.domain.IMediaStore
+import de.rogallab.mobile.domain.IAppMediaStore
 import de.rogallab.mobile.domain.exceptions.IoException
 
 class ImageUcSelectGal(
-   private val _mediaStore: IMediaStore,
+   private val _mediaStore: IAppMediaStore,
    private val _appStorage: IAppStorage,
 ) {
    suspend operator fun invoke(uriStringMediaStore: String, groupName:String): Result<Uri> {

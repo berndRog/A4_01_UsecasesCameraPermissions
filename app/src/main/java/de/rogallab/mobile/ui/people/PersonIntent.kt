@@ -20,7 +20,10 @@ sealed class PersonIntent {
    data object Undo : PersonIntent()
    data object Restored : PersonIntent()
 
+   data class SelectImage(val uriString: String, val groupName:String): PersonIntent()
+   data class CaptureImage(val uriString: String, val groupName:String): PersonIntent()
+   data object CommitDeleteIfNotUndone: PersonIntent()
+
    data class ErrorEvent(val message: String): PersonIntent()
    data class UndoEvent(val errorState: ErrorState) : PersonIntent()
-
 }

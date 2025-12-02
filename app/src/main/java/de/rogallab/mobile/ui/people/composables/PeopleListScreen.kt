@@ -164,7 +164,10 @@ fun PeopleListScreen(
                         actionLabel = undoActionLabel,
                         onActionPerform = { viewModel.handlePersonIntent(PersonIntent.Undo) },
                         withDismissAction = false,
-                        duration = SnackbarDuration.Long
+                        duration = SnackbarDuration.Long,
+                        onDismissed = {
+                           viewModel.handlePersonIntent(PersonIntent.CommitDeleteIfNotUndone)
+                        }
                      )
                      viewModel.handlePersonIntent(PersonIntent.UndoEvent(errorState))
                   }

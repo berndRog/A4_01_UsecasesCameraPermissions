@@ -64,7 +64,7 @@ class AppStorage(
       try {
          // Create destination file with unique name
          val dir = File(_context.filesDir, pathName).apply { if (!exists()) mkdirs() }
-         val destinationFile = File(dir, "IMG_${System.currentTimeMillis()}.jpg")
+         val destinationFile = File(dir, "${newUuid()}.jpg")
 
          // Copy from Image URI to app storage
          _context.contentResolver.openInputStream(sourceUri)?.use { inputStream ->
@@ -82,7 +82,7 @@ class AppStorage(
    
    
    // Load bitmap from any URI (MediaStore, file URI, content URI)
-   override suspend fun loadImageFromAppStorage(uri: Uri): Bitmap? = withContext(_dispatcher) {
+   override suspend fun loadImage(uri: Uri): Bitmap? = withContext(_dispatcher) {
       try {
          if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             val source = ImageDecoder.createSource(_context.contentResolver, uri) // Fix: _context
@@ -92,13 +92,13 @@ class AppStorage(
             return@withContext MediaStore.Images.Media.getBitmap(_context.contentResolver, uri) // Fix: _context
          }
       } catch (e: Exception) {
-         logError("<-deleteImageOnAppStorage",
-            e.localizedMessage ?: "Failed to load image from app storage")
-         return@withContext null
+         logError("<-loadImage",
+            e.message ?: "Failed to load image from app storage")
+         throw e
       }
    }
 
-   override suspend fun deleteImageOnAppStorage(
+   override suspend fun deleteImage(
       pathName:String
    ): Unit = withContext(_dispatcher) {
       try {
@@ -107,13 +107,11 @@ class AppStorage(
             this.absoluteFile.delete()
          }
       } catch(e:IOException ) {
-         logError("<-deleteImageOnAppStorage",
+         logError("<-deleteImage",
             e.localizedMessage ?: "Failed to delete file: $pathName")
          throw e
       }
    }
-
-
 
    companion object {
       private const val TAG = "<-MediaStore"

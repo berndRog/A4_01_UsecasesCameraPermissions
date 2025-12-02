@@ -1,13 +1,22 @@
 package de.rogallab.mobile.test.ui.people
 
 import android.content.Context
+import android.graphics.Bitmap
+import android.net.Uri
 import androidx.navigation3.runtime.NavKey
 import app.cash.turbine.test
 import de.rogallab.mobile.data.IDataStore
 import de.rogallab.mobile.data.local.Seed
+import de.rogallab.mobile.domain.IAppMediaStore
+import de.rogallab.mobile.domain.IAppStorage
+import de.rogallab.mobile.domain.IImageUseCases
 import de.rogallab.mobile.domain.IPeopleUseCases
 import de.rogallab.mobile.domain.IPersonRepository
 import de.rogallab.mobile.domain.entities.Person
+import de.rogallab.mobile.domain.usecases.images.ImageUcCaptureCam
+import de.rogallab.mobile.domain.usecases.images.ImageUcDeleteLocal
+import de.rogallab.mobile.domain.usecases.images.ImageUcSelectGal
+import de.rogallab.mobile.domain.usecases.images.ImageUseCases
 import de.rogallab.mobile.test.MainDispatcherRule
 import de.rogallab.mobile.test.TestApplication
 import de.rogallab.mobile.test.di.defModulesTest
@@ -28,6 +37,7 @@ import org.junit.runner.RunWith
 import org.koin.core.context.startKoin
 import org.koin.core.context.stopKoin
 import org.koin.core.parameter.parametersOf
+import org.koin.dsl.module
 import org.koin.test.KoinTest
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
@@ -43,13 +53,11 @@ import kotlin.test.assertTrue
 @OptIn(ExperimentalCoroutinesApi::class)
 class PersonViewModelIntegrationTest : KoinTest {
 
-
    @get:Rule
    val tempDir = TemporaryFolder()
 
    @get:Rule
    val mainRule = MainDispatcherRule()
-
 
    // parameters for tests
    private val directoryName = "test"
@@ -75,9 +83,31 @@ class PersonViewModelIntegrationTest : KoinTest {
       de.rogallab.mobile.Globals.isComp = false
       setupConsoleLogger()
 
-      stopKoin() // ensure clean graph per test run
+      // ensure clean Koin graph per test run
+      stopKoin()
 
-      // Boot Koin graph exactly like your other tests
+      // Additional test module to override image-related dependencies
+      val imageFakeModule = module {
+         // 1) Fake low-level dependencies so no real MediaStore / files are touched
+         single<IAppMediaStore> { FakeAppMediaStore() }
+         single<IAppStorage> { FakeAppStorage() }
+
+         // 2) Real image use case classes, but injected with the fake low-level deps
+         single { ImageUcCaptureCam(get(), get()) }      // (IAppMediaStore, IAppStorage)
+         single { ImageUcSelectGal(get(), get()) }       // (IAppMediaStore, IAppStorage)
+         single { ImageUcDeleteLocal(get()) }            // (IAppStorage)
+
+         // 3) Aggregator for all image use cases, as required by IImageUseCases
+         single<IImageUseCases> {
+            ImageUseCases(
+               captureImage = get(),
+               selectImage = get(),
+               deleteImageLocal = get()
+            )
+         }
+      }
+
+      // Boot Koin graph exactly like your other tests + image fakes
       val koinApp = startKoin {
          modules(
             defModulesTest(
@@ -85,25 +115,27 @@ class PersonViewModelIntegrationTest : KoinTest {
                directoryName = directoryName,
                fileName = fileName,
                ioDispatcher = mainRule.dispatcher()
-            )
+            ),
+            imageFakeModule
          )
       }
+
       val koin = koinApp.koin
       _seed = koin.get<Seed>()
       _dataStore = koin.get<IDataStore>()
       _repository = koin.get<IPersonRepository>()
+      _uc = koin.get<IPeopleUseCases>()
       val navKey: NavKey = PeopleList
       val navHandler: INavHandler = koin.get { parametersOf(navKey) }
       _viewModel = koin.get { parametersOf(navHandler) }
 
-
       _filePath = _dataStore.filePath
       _dataStore.initialize()
+
       // Create seed data after Koin has started
       _seedPeople = _seed.people.toList()
 
-
-      // Trigger lazy ViewModel creation so that init { } runs and the initial Room flow starts.
+      // Trigger lazy ViewModel creation so that init { } runs and the initial DataStore/Room flow starts.
       _viewModel
       // Let all coroutines (init + initial fetch) complete before tests assert on state.
       advanceUntilIdle()
@@ -115,6 +147,9 @@ class PersonViewModelIntegrationTest : KoinTest {
          Files.deleteIfExists(_filePath)
       } catch (_: Throwable) {
          // ignore cleanup errors
+      } finally {
+         // Clean up Koin as well
+         stopKoin()
       }
    }
 
@@ -147,7 +182,6 @@ class PersonViewModelIntegrationTest : KoinTest {
          // (1) Initial PersonUiState (usually a template/empty person)
          val initial = awaitItem()
          // No loading flag on PersonUiState, so we only assert structural expectations if needed.
-         // e.g. assertEquals(Person(), initial.person) if your default is a template
 
          // Trigger FetchById via MVI intent
          _viewModel.handlePersonIntent(PersonIntent.FetchById(id))
@@ -183,7 +217,7 @@ class PersonViewModelIntegrationTest : KoinTest {
          _viewModel.handlePersonIntent(PersonIntent.FirstNameChange(firstName))
          _viewModel.handlePersonIntent(PersonIntent.LastNameChange(lastName))
 
-         // Trigger create() (Room flow will emit an updated list)
+         // Trigger create() (flow will emit an updated list)
          _viewModel.handlePersonIntent(PersonIntent.Create)
 
          // (2) Updated state with the newly created person
@@ -236,7 +270,7 @@ class PersonViewModelIntegrationTest : KoinTest {
    }
 
    // ------------------------------------------------------------------------
-   // Update: list size remains same and PersonUiState is consistent with PeopleUiState
+   // Update: list size remains same and PersonUiState is consistent
    // ------------------------------------------------------------------------
 
    @Test
@@ -376,10 +410,6 @@ class PersonViewModelIntegrationTest : KoinTest {
          _viewModel.handlePersonIntent(PersonIntent.Undo)
 
          // (2) State after Undo
-         // Expected:
-         //   list size = initialSize
-         //   victim restored
-         //   restoredPersonId = victimId
          val afterUndo = awaitItem()
          assertEquals(initialSize, afterUndo.people.size, "List size should be restored")
          assertTrue(afterUndo.people.any { it.id == victimId }, "Victim should be restored in the list")
@@ -477,5 +507,62 @@ class PersonViewModelIntegrationTest : KoinTest {
 
          cancelAndIgnoreRemainingEvents()
       }
+   }
+
+   // ------------------------------------------------------------------------
+   // Fakes for image-related dependencies (IAppMediaStore, IAppStorage)
+   // ------------------------------------------------------------------------
+
+   /**
+    * Fake implementation of [IAppMediaStore] for Robolectric Person tests.
+    * We do not want any real MediaStore or bitmap work here; all methods are stubs.
+    */
+   private class FakeAppMediaStore : IAppMediaStore {
+      override suspend fun createGroupedImageUri(
+         groupName: String,
+         filename: String?
+      ): Uri? = null
+
+      override suspend fun saveImageToMediaStore(
+         groupName: String,
+         sourceUri: Uri
+      ): Uri? = null
+
+      override suspend fun deleteImageGroup(groupName: String): Int = 0
+
+      override suspend fun convertDrawableToMediaStore(
+         drawableId: Int,
+         groupName: String,
+         uuidString: String?
+      ): Uri? = null
+
+      override suspend fun convertMediaStoreToAppStorage(
+         sourceUri: Uri,
+         groupName: String,
+         appStorage: IAppStorage
+      ): Uri? = null
+
+      override suspend fun loadBitmap(uri: Uri): Bitmap? = null
+   }
+
+   /**
+    * Fake implementation of [IAppStorage] for Robolectric Person tests.
+    * All methods are stubs; the PersonViewModel tests do not rely on real image storage.
+    */
+   private class FakeAppStorage : IAppStorage {
+      override suspend fun convertImageUriToAppStorage(
+         sourceUri: Uri,
+         pathName: String
+      ): Uri? = null
+
+      override suspend fun convertDrawableToAppStorage(
+         drawableId: Int,
+         pathName: String,
+         uuidString: String?
+      ): Uri? = null
+
+      override suspend fun loadImage(uri: Uri): Bitmap? = null
+
+      override suspend fun deleteImage(pathName: String) {}
    }
 }

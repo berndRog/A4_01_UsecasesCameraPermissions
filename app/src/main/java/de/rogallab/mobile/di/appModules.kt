@@ -5,15 +5,16 @@ import de.rogallab.mobile.data.IDataStore
 import de.rogallab.mobile.data.local.Seed
 import de.rogallab.mobile.data.local.appstorage.AppStorage
 import de.rogallab.mobile.data.local.datastore.DataStore
-import de.rogallab.mobile.data.local.mediastore.MediaStore
+import de.rogallab.mobile.data.local.mediastore.AppMediaStore
 import de.rogallab.mobile.data.repositories.PersonRepository
 import de.rogallab.mobile.domain.IAppStorage
 import de.rogallab.mobile.domain.IImageUseCases
-import de.rogallab.mobile.domain.IMediaStore
+import de.rogallab.mobile.domain.IAppMediaStore
 import de.rogallab.mobile.domain.IPeopleUseCases
 import de.rogallab.mobile.domain.IPersonRepository
 import de.rogallab.mobile.domain.IPersonUseCases
 import de.rogallab.mobile.domain.usecases.images.ImageUcCaptureCam
+import de.rogallab.mobile.domain.usecases.images.ImageUcDeleteLocal
 import de.rogallab.mobile.domain.usecases.images.ImageUcSelectGal
 import de.rogallab.mobile.domain.usecases.images.ImageUseCases
 import de.rogallab.mobile.domain.usecases.people.PeopleUcFetchSorted
@@ -21,10 +22,9 @@ import de.rogallab.mobile.domain.usecases.people.PeopleUseCases
 import de.rogallab.mobile.domain.usecases.person.PersonUcCreate
 import de.rogallab.mobile.domain.usecases.person.PersonUcFetchById
 import de.rogallab.mobile.domain.usecases.person.PersonUcRemove
-import de.rogallab.mobile.domain.usecases.person.PersonUcUpdate
+import de.rogallab.mobile.domain.usecases.person.PersonUcUpdateWithLocalImage
 import de.rogallab.mobile.domain.usecases.person.PersonUseCases
 import de.rogallab.mobile.domain.utilities.logInfo
-import de.rogallab.mobile.ui.images.ImageViewModel
 import de.rogallab.mobile.ui.navigation.INavHandler
 import de.rogallab.mobile.ui.navigation.Nav3ViewModel
 import de.rogallab.mobile.ui.people.PersonValidator
@@ -56,16 +56,7 @@ val defModules: Module = module {
       )
    }
 
-   // data modules
-   logInfo(tag, "single    -> AppStorage:IAppStorage")
-   single<IAppStorage> {
-      AppStorage(
-         _context = androidContext(),
-         _dispatcher = get<CoroutineDispatcher>(named("DispatcherIo"))
-      )
-   }
-
-   logInfo(tag, "single    -> DataStore")
+   logInfo(tag, "single    -> DataStore: IDataStore")
    single<IDataStore> {
       DataStore(
          appHomeName = null,
@@ -77,13 +68,23 @@ val defModules: Module = module {
       )
    }
 
-   logInfo(tag, "single    -> MediaStore:IMediaStore")
-   single<IMediaStore> {
-      MediaStore(
+   logInfo(tag, "single    -> AppStorage:IAppStorage")
+   single<IAppStorage> {
+      AppStorage(
          _context = androidContext(),
          _dispatcher = get<CoroutineDispatcher>(named("DispatcherIo"))
       )
    }
+
+   logInfo(tag, "single    -> AppMediaStore:IAppMediaStore")
+   single<IAppMediaStore> {
+      AppMediaStore(
+         _context = androidContext(),
+         _dispatcher = get<CoroutineDispatcher>(named("DispatcherIo"))
+      )
+   }
+
+
 
    logInfo(tag, "single    -> PersonRepository: IPersonRepository")
    single<IPersonRepository> {
@@ -109,10 +110,18 @@ val defModules: Module = module {
    // single PersonUseCases
    logInfo(tag, "single    -> PersonUcFetchById")
    single { PersonUcFetchById(get<IPersonRepository>()) }
+// single PersonUseCases
+   logInfo(tag, "single    -> PersonUcFetchById")
+   single { PersonUcFetchById(get<IPersonRepository>()) }
    logInfo(tag, "single    -> PersonUcCreate")
    single { PersonUcCreate(get<IPersonRepository>()) }
-   logInfo(tag, "single    -> PersonUcUpdate")
-   single { PersonUcUpdate(get<IPersonRepository>()) }
+   logInfo(tag, "single    -> PersonUcUpdateWithLocalImage")
+   single {
+      PersonUcUpdateWithLocalImage(
+         _repository = get<IPersonRepository>(),
+         _appStorage = get<IAppStorage>()
+      )
+   }
    logInfo(tag, "single    -> PersonUcRemove")
    single { PersonUcRemove(get<IPersonRepository>()) }
    // Aggregation
@@ -121,7 +130,7 @@ val defModules: Module = module {
       PersonUseCases(
          fetchById = get<PersonUcFetchById>(),
          create = get<PersonUcCreate>(),
-         update = get<PersonUcUpdate>(),
+         updateWithLocalImage = get<PersonUcUpdateWithLocalImage>(),
          remove = get<PersonUcRemove>()
       )
    }
@@ -131,22 +140,35 @@ val defModules: Module = module {
    single {
       ImageUcCaptureCam(
          _appStorage = get<IAppStorage>(),
-         _mediaStore = get<IMediaStore>()
+         _mediaStore = get<IAppMediaStore>()
       )
    }
    logInfo(tag, "single    -> ImageUcSelectFromGallery")
    single {
       ImageUcSelectGal(
          _appStorage = get<IAppStorage>(),
-         _mediaStore = get<IMediaStore>()
+         _mediaStore = get<IAppMediaStore>()
       )
    }
-
+   logInfo(tag, "single    -> ImageUcDeleteLocalSelectFromGallery")
+   single {
+      ImageUcSelectGal(
+         _appStorage = get<IAppStorage>(),
+         _mediaStore = get<IAppMediaStore>()
+      )
+   }
+   logInfo(tag, "single    -> ImageUcDeleteLocal")
+   single {
+      ImageUcDeleteLocal(
+         _appStorage = get<IAppStorage>()
+      )
+   }
    // Aggregation
    single<IImageUseCases> {
       ImageUseCases(
          captureImage = get<ImageUcCaptureCam>(),
          selectImage = get<ImageUcSelectGal>(),
+         deleteImageLocal = get<ImageUcDeleteLocal>()
       )
    }
 
@@ -161,19 +183,12 @@ val defModules: Module = module {
       Nav3ViewModel(startDestination = startDestination)
    } bind INavHandler::class
 
-   logInfo(tag, "viewModel -> ImageViewModel")
-   viewModel { (navHandler: INavHandler) ->
-      ImageViewModel(
-         _imageUc = get<IImageUseCases>(),
-         navHandler = navHandler,
-      )
-   }
-
    logInfo(tag, "viewModel -> PersonViewModel")
    viewModel { (navHandler: INavHandler) ->
       PersonViewModel(
          _peopleUc = get<IPeopleUseCases>(),
          _personUc = get<IPersonUseCases>(),
+         _imageUc = get<IImageUseCases>(),
          _navHandler = navHandler,
          _validator = get<PersonValidator>()
       )

@@ -1,16 +1,12 @@
 package de.rogallab.mobile.domain
 
-import android.content.Context
 import android.graphics.Bitmap
 import android.net.Uri
 
-interface IMediaStore {
-   // Creates a session folder for storing images
-   fun createSessionFolder(): String
-
+interface IAppMediaStore {
    // Creates a grouped image URI for storing images in a specific group in the MediaStore
-   fun createGroupedImageUri(
-      groupName: String = createSessionFolder(),
+   suspend fun createGroupedImageUri(
+      groupName: String,
       filename: String? = null
    ): Uri?
 
@@ -21,7 +17,7 @@ interface IMediaStore {
    ): Uri?
 
    // Deletes all images from a specific group
-   fun deleteImageGroup(groupName: String): Int
+   suspend fun deleteImageGroup(groupName: String): Int
 
    // Convert a drawable resource to the media store under a specific group
    suspend fun convertDrawableToMediaStore(

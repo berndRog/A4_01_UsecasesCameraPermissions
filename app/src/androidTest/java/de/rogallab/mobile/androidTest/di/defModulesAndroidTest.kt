@@ -7,10 +7,11 @@ import de.rogallab.mobile.data.IDataStore
 import de.rogallab.mobile.data.local.Seed
 import de.rogallab.mobile.data.local.appstorage.AppStorage
 import de.rogallab.mobile.data.local.datastore.DataStore
-import de.rogallab.mobile.data.local.mediastore.MediaStore
+import de.rogallab.mobile.data.local.mediastore.AppMediaStore
 import de.rogallab.mobile.data.repositories.PersonRepository
+import de.rogallab.mobile.domain.IAppMediaStore
 import de.rogallab.mobile.domain.IAppStorage
-import de.rogallab.mobile.domain.IMediaStore
+import de.rogallab.mobile.domain.IImageUseCases
 import de.rogallab.mobile.domain.IPeopleUseCases
 import de.rogallab.mobile.domain.IPersonRepository
 import de.rogallab.mobile.domain.IPersonUseCases
@@ -19,7 +20,7 @@ import de.rogallab.mobile.domain.usecases.people.PeopleUseCases
 import de.rogallab.mobile.domain.usecases.person.PersonUcCreate
 import de.rogallab.mobile.domain.usecases.person.PersonUcFetchById
 import de.rogallab.mobile.domain.usecases.person.PersonUcRemove
-import de.rogallab.mobile.domain.usecases.person.PersonUcUpdate
+import de.rogallab.mobile.domain.usecases.person.PersonUcUpdateWithLocalImage
 import de.rogallab.mobile.domain.usecases.person.PersonUseCases
 import de.rogallab.mobile.domain.utilities.logInfo
 import de.rogallab.mobile.domain.utilities.newUuid
@@ -33,7 +34,6 @@ import org.koin.core.module.Module
 import org.koin.core.qualifier.named
 import org.koin.dsl.bind
 import org.koin.dsl.module
-
 
 fun defModulesAndroidTest(
    appHomeName: String,
@@ -84,8 +84,8 @@ fun defModulesAndroidTest(
    }
 
    logInfo(tag, "test single    -> MediaStore: IMediaStore")
-   single<IMediaStore> {
-      MediaStore(
+   single<IAppMediaStore> {
+      AppMediaStore(
          _context = get<Context>(),
          _dispatcher = get(named("dispatcherIo")),
       )
@@ -113,12 +113,19 @@ fun defModulesAndroidTest(
    }
 
    // PersonUseCases
+   // single PersonUseCases
    logInfo(tag, "single    -> PersonUcFetchById")
    single { PersonUcFetchById(get<IPersonRepository>()) }
    logInfo(tag, "single    -> PersonUcCreate")
    single { PersonUcCreate(get<IPersonRepository>()) }
-   logInfo(tag, "single    -> PersonUcUpdate")
-   single { PersonUcUpdate(get<IPersonRepository>()) }
+   logInfo(tag, "single    -> PersonUcUpdateWithLocalImage")
+   single {
+      PersonUcUpdateWithLocalImage(
+         _repository = get<IPersonRepository>(),
+         _appStorage = get<IAppStorage>()
+      )
+   }
+
    logInfo(tag, "single    -> PersonUcRemove")
    single { PersonUcRemove(get<IPersonRepository>()) }
    // Aggregation
@@ -127,7 +134,7 @@ fun defModulesAndroidTest(
       PersonUseCases(
          fetchById = get<PersonUcFetchById>(),
          create = get<PersonUcCreate>(),
-         update = get<PersonUcUpdate>(),
+         updateWithLocalImage = get<PersonUcUpdateWithLocalImage>(),
          remove = get<PersonUcRemove>()
       )
    }
@@ -154,6 +161,7 @@ fun defModulesAndroidTest(
       PersonViewModel(
          _peopleUc = get<IPeopleUseCases>(),
          _personUc = get<IPersonUseCases>(),
+         _imageUc = get<IImageUseCases>(),
          _navHandler = navHandler,
          _validator = get<PersonValidator>()
       )

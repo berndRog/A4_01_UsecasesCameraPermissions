@@ -1,16 +1,19 @@
 package de.rogallab.mobile.androidTest.domain.usecases
 
+import android.graphics.Bitmap
 import android.net.Uri
 import androidx.core.net.toUri
 import de.rogallab.mobile.Globals
+import de.rogallab.mobile.domain.IAppMediaStore
 import de.rogallab.mobile.domain.IAppStorage
-import de.rogallab.mobile.domain.IMediaStore
 import de.rogallab.mobile.domain.exceptions.IoException
 import de.rogallab.mobile.domain.usecases.images.ImageUcCaptureCam
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Test
-import kotlin.test.*
+import kotlin.test.assertEquals
+import kotlin.test.assertIs
+import kotlin.test.assertTrue
 
 class ImageUcCaptureCamUt {
 
@@ -20,6 +23,7 @@ class ImageUcCaptureCamUt {
 
    @Before
    fun setup() {
+      // Default group name used when an empty groupName is passed in
       Globals.mediaStoreGroupname = "DefaultGroup"
 
       fakeMediaStore = FakeMediaStore()
@@ -44,8 +48,12 @@ class ImageUcCaptureCamUt {
       // assert
       assertTrue(result.isSuccess)
       assertEquals(uriAppStorage, result.getOrNull())
+
+      // Ensure that the MediaStore fake received the correct parameters
       assertEquals(capturedUriString.toUri(), fakeMediaStore.lastSaveSourceUri)
       assertEquals(groupName, fakeMediaStore.lastSaveGroupName)
+
+      // Ensure that the AppStorage fake received the correct parameters
       assertEquals(uriMediaStore, fakeAppStorage.lastSourceUri)
       assertEquals("images/$groupName", fakeAppStorage.lastPathName)
    }
@@ -64,7 +72,10 @@ class ImageUcCaptureCamUt {
       assertTrue(result.isFailure)
       val ex = result.exceptionOrNull()
       assertIs<IoException>(ex)
-      assertTrue(ex.message?.contains("Failed to save image to MediaStore") == true)
+      assertTrue(
+         ex?.message?.contains("Failed to save image to MediaStore") == true,
+         "Expected error message to mention failure saving to MediaStore"
+      )
    }
 
    @Test
@@ -83,27 +94,40 @@ class ImageUcCaptureCamUt {
       assertTrue(result.isFailure)
       val ex = result.exceptionOrNull()
       assertIs<IoException>(ex)
-      assertTrue(ex.message?.contains("Failed to copy image from MediaStore to app storage") == true)
+      assertTrue(
+         ex?.message?.contains("Failed to copy image from MediaStore to app storage") == true,
+         "Expected error message to mention failure copying to app storage"
+      )
    }
 
-   // --- Fakes ---
+   // --- Fakes ---------------------------------------------------------------
 
-   private class FakeMediaStore : IMediaStore {
+   /**
+    * Fake implementation of [IAppMediaStore] for unit-testing the use case.
+    *
+    * Only [saveImageToMediaStore] is actually used in the tests and contains
+    * logic to record the parameters. All other methods are simple stubs.
+    */
+   private class FakeMediaStore : IAppMediaStore {
       var saveImageToMediaStoreResult: Uri? = null
       var lastSaveGroupName: String? = null
       var lastSaveSourceUri: Uri? = null
 
-      override fun createSessionFolder(): String = "dummy"
+      override suspend fun createGroupedImageUri(
+         groupName: String,
+         filename: String?
+      ): Uri? = null
 
-      override fun createGroupedImageUri(groupName: String, filename: String?): Uri? = null
-
-      override suspend fun saveImageToMediaStore(groupName: String, sourceUri: Uri): Uri? {
+      override suspend fun saveImageToMediaStore(
+         groupName: String,
+         sourceUri: Uri
+      ): Uri? {
          lastSaveGroupName = groupName
          lastSaveSourceUri = sourceUri
          return saveImageToMediaStoreResult
       }
 
-      override fun deleteImageGroup(groupName: String): Int = 0
+      override suspend fun deleteImageGroup(groupName: String): Int = 0
 
       override suspend fun convertDrawableToMediaStore(
          drawableId: Int,
@@ -117,9 +141,15 @@ class ImageUcCaptureCamUt {
          appStorage: IAppStorage
       ): Uri? = null
 
-      override suspend fun loadBitmap(uri: Uri) = null
+      override suspend fun loadBitmap(uri: Uri): Bitmap? = null
    }
 
+   /**
+    * Fake implementation of [IAppStorage] used by the use case tests.
+    *
+    * Only [convertImageUriToAppStorage] is relevant for the current tests.
+    * It records parameters and returns a pre-configured Uri.
+    */
    private class FakeAppStorage : IAppStorage {
       var convertResult: Uri? = null
       var lastSourceUri: Uri? = null
@@ -134,15 +164,15 @@ class ImageUcCaptureCamUt {
          return convertResult
       }
 
-      // Dummy-Implementierungen für restliche Interface-Methoden
+      // Dummy implementations for the remaining interface methods
       override suspend fun convertDrawableToAppStorage(
          drawableId: Int,
          pathName: String,
          uuidString: String?
       ): Uri? = null
 
-      override suspend fun loadImageFromAppStorage(uri: Uri) = null
+      override suspend fun loadImage(uri: Uri): Bitmap? = null
 
-      override suspend fun deleteImageOnAppStorage(pathName: String) {}
+      override suspend fun deleteImage(pathName: String) {}
    }
 }

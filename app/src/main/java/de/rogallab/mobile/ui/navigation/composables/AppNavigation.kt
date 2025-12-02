@@ -18,7 +18,6 @@ import androidx.navigation3.ui.NavDisplay
 import de.rogallab.mobile.Globals
 import de.rogallab.mobile.domain.utilities.logComp
 import de.rogallab.mobile.domain.utilities.logDebug
-import de.rogallab.mobile.ui.images.ImageViewModel
 import de.rogallab.mobile.ui.navigation.INavHandler
 import de.rogallab.mobile.ui.navigation.Nav3ViewModel
 import de.rogallab.mobile.ui.navigation.PeopleList
@@ -36,30 +35,11 @@ fun AppNavigation(
    // navViewModel is Activity-scoped
    navViewModel: Nav3ViewModel = koinActivityViewModel { parametersOf(PeopleList) },
    personViewModel: PersonViewModel = koinActivityViewModel{ parametersOf(navViewModel) },
-   imageViewModel: ImageViewModel = koinActivityViewModel{ parametersOf(navViewModel as INavHandler) },
    animationDuration: Int = Globals.animationDuration
 ) {
    val tag = "<-AppNavigation"
    val nComp = remember { mutableIntStateOf(1) }
    SideEffect { logComp(tag, "Composition #${nComp.value++}") }
-
-
-   // Feature-level owner: all People/Person screens will share the same ViewModel instances
-   // PersonViewModel is scoped to the peopleOwner
-//   // Get the LifecycleOwner and Lifecycle
-//   val lifecycleOwner = (LocalActivity.current as? ComponentActivity)
-//      ?: LocalLifecycleOwner.current
-//   val lifecycle = lifecycleOwner.lifecycle
-//   SideEffect {
-//      logVerbose(tag, "lifecycleOwner:${lifecycleOwner.toString()} lifecycle.State:${lifecycle.currentState.toString()}")
-//   }
-
-//   val peopleOwner: ViewModelStoreOwner = rememberPeopleGraphOwner("people_graph")
-//   val personViewModel: PersonViewModel = koinViewModel(
-//      viewModelStoreOwner =  peopleOwner,                        // same owner for all entries
-//      parameters = { parametersOf(navViewModel) }   // creation params (used only the first time)
-//   )
-
 
    // Use the navViewModel's backStack to manage navigation state
    val backStack = navViewModel.backStack
@@ -124,7 +104,6 @@ fun AppNavigation(
          entry<PersonInput> { _ ->
             PersonInputScreen(
                viewModel = personViewModel,
-               imageViewModel = imageViewModel,
                onNavigateReverse =  navViewModel::pop
             )
          }
@@ -132,7 +111,6 @@ fun AppNavigation(
             PersonDetailScreen(
                id = key.id,
                viewModel = personViewModel,
-               imageViewModel = imageViewModel,
                onNavigateReverse = navViewModel::pop
             )
          }

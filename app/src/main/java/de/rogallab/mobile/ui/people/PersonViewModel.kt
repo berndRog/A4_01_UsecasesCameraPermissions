@@ -2,15 +2,20 @@ package de.rogallab.mobile.ui.people
 
 import androidx.compose.material3.SnackbarDuration
 import androidx.lifecycle.viewModelScope
+import de.rogallab.mobile.domain.IImageUseCases
 import de.rogallab.mobile.domain.IPeopleUseCases
 import de.rogallab.mobile.domain.IPersonUseCases
 import de.rogallab.mobile.domain.entities.Person
+import de.rogallab.mobile.domain.usecases.undoredo.SingleSlotUndoBuffer
+import de.rogallab.mobile.domain.usecases.undoredo.optimisticRemove
+import de.rogallab.mobile.domain.usecases.undoredo.optimisticUndoRemove
 import de.rogallab.mobile.domain.utilities.logDebug
 import de.rogallab.mobile.domain.utilities.newUuid
 import de.rogallab.mobile.ui.base.BaseViewModel
 import de.rogallab.mobile.ui.base.updateState
 import de.rogallab.mobile.ui.navigation.INavHandler
 import de.rogallab.mobile.ui.navigation.PeopleList
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -22,10 +27,10 @@ import kotlinx.coroutines.launch
 class PersonViewModel(
    private val _peopleUc: IPeopleUseCases,
    private val _personUc: IPersonUseCases,
+   private val _imageUc: IImageUseCases,
    private val _navHandler: INavHandler,
    private val _validator: PersonValidator
 ) : BaseViewModel(_navHandler, TAG) {
-
 
    // region StateFlows and Intent handlers --------------------------------------------------------
    // StateFlow for PeopleListScreen ---------------------------------------------------------------
@@ -71,6 +76,10 @@ class PersonViewModel(
          is PersonIntent.Undo -> undoRemove()
          is PersonIntent.Restored -> restored()
 
+         is PersonIntent.SelectImage -> selectImage(intent.uriString, intent.groupName)
+         is PersonIntent.CaptureImage -> captureImage(intent.uriString, intent.groupName)
+         is PersonIntent.CommitDeleteIfNotUndone -> commitDeleteIfNotUndone()
+
          is PersonIntent.ErrorEvent -> handleErrorEvent(message = intent.message)
          is PersonIntent.UndoEvent -> handleUndoEvent(intent.errorState)
       }
@@ -78,37 +87,37 @@ class PersonViewModel(
    // endregion
 
    // region Input updates (immutable copy, trimmed) -----------------------------------------------
-   private fun onFirstNameChange(firstName: String) =
-      updateState(_personUiStateFlow) {
-         copy(person = person.copy(firstName = firstName.trim()))
-      }
-
-   private fun onLastNameChange(lastName: String) =
-      updateState(_personUiStateFlow) {
-         copy(person = person.copy(lastName = lastName.trim()))
-      }
-
-   private fun onEmailChange(email: String?) =
-      updateState(_personUiStateFlow) {
-         copy(person = person.copy(email = email?.trim()))
-      }
-
-   private fun onPhoneChange(phone: String?) =
-      updateState(_personUiStateFlow) {
-         copy(person = person.copy(phone = phone))
-      }
-
-   private fun onImagePathChange(uriString: String?) =
-      updateState(_personUiStateFlow) {
-         copy(person = person.copy(imagePath = uriString?.trim()))
-      }
+   private fun onFirstNameChange(firstName: String) {
+      val trimmed = firstName.trim()
+      if(trimmed == _personUiStateFlow.value.person.firstName) return
+      updateState(_personUiStateFlow) { copy(person = person.copy(firstName = trimmed)) }
+   }
+   private fun onLastNameChange(lastName: String) {
+      val trimmed = lastName.trim()
+      if (trimmed == _personUiStateFlow.value.person.lastName) return
+      updateState(_personUiStateFlow) { copy(person = person.copy(lastName = lastName.trim())) }
+   }
+   private fun onEmailChange(email: String?) {
+      var trimmed = email?.trim()
+      if (trimmed == _personUiStateFlow.value.person.email) return
+      updateState(_personUiStateFlow) { copy(person = person.copy(email = email?.trim())) }
+   }
+   private fun onPhoneChange(phone: String?) {
+      val trimmed = phone?.trim()
+      if (trimmed == _personUiStateFlow.value.person.phone) return
+      updateState(_personUiStateFlow) { copy(person = person.copy(phone = trimmed)) }
+   }
+   private fun onImagePathChange(uriString: String?) {
+      val trimmed = uriString?.trim()
+      if (trimmed == _personUiStateFlow.value.person.imagePath) return
+      updateState(_personUiStateFlow) { copy(person = person.copy(imagePath = trimmed)) }
+   }
 
    // clear person state and prepare for new person input
    private fun clearState() =
-      updateState(_personUiStateFlow) {
-         copy(person = Person(id = newUuid()))
-      }
+      updateState(_personUiStateFlow) { copy(person = Person(id = newUuid())) }
    // endregion
+
 
    // region Fetch by id (error → navigate back to list) -------------------------------------------
    private fun fetchById(id: String) {
@@ -135,7 +144,7 @@ class PersonViewModel(
    private fun update() {
       logDebug(TAG, "update()")
       viewModelScope.launch {
-         _personUc.update(_personUiStateFlow.value.person)
+         _personUc.updateWithLocalImage(_personUiStateFlow.value.person)
             .onSuccess {  }
             .onFailure { handleErrorEvent(it) }
       }
@@ -151,40 +160,146 @@ class PersonViewModel(
    // endregion
 
    // region Single-slot UNDO buffer ---------------------------------------------------------------
-   private var _removedPerson: Person? = null
-   private var _removedPersonIndex: Int = -1 // Store only the index
+   // Single-slot undo buffer for the last removed Person.
+   private var _undoBuffer = SingleSlotUndoBuffer<Person>()
 
+   // Removes a person using the "Optimistic-then-Persist" pattern.
+   // Optimistic:
+   //  - The UI list is updated immediately so the UI feels instant.
+   //  - The removed item and index are stored in the undo buffer.
+   // Then-Persist:
+   // - The actual repository deletion happens in the background.
+   // - If persistence fails, an error event is emitted.
    private fun removeUndo(person: Person) {
-      logDebug(TAG, "removePerson()")
-      removeItem(
+      logDebug(TAG, "removeUndo(${person.id})")
+
+      val currentList = _peopleUiStateFlow.value.people
+
+      // 1) Pure helper: perform optimistic list change and build undo buffer
+      val (updatedList, newBuffer) = optimisticRemove(
+         list = currentList,
          item = person,
-         currentList = _peopleUiStateFlow.value.people,
          getId = { it.id },
-         onRemovedItem = { _removedPerson = it  },
-         onRemovedItemIndex = { _removedPersonIndex = it },
-         updateUi = { updatedList -> updateState(_peopleUiStateFlow) { copy(people = updatedList) } },
-         persistRemove = { _personUc.remove(it) },
-         tag = TAG
+         undoBuffer = _undoBuffer
       )
+      // If nothing changed (item not found), stop here
+      if (updatedList === currentList) return
+
+      // 2) Update undo buffer
+      _undoBuffer = newBuffer
+
+      // 3) Immediately update UI state (Optimistic)
+      updateState(_peopleUiStateFlow) { copy(people = updatedList) }
+
+      // 4) Persist removal asynchronously (Then-Persist)
+      viewModelScope.launch {
+         logDebug(TAG, "persistRemove(${person.id})")
+         _personUc.remove(person)
+            .onFailure { handleErrorEvent(it) }
+      }
    }
+
+   // Undoes the last removed person using the pure helper.
+   // Optimistic:
+   //  - The item is reinserted immediately into the UI list.
+   //  - The undo buffer is cleared.
+   // Then-Persist:
+   // - The Person is recreated in the repository in the background.
+   // If the Person was already present in the list (rare edge case),
+   // only the buffer is cleared and no repository call is made.
    private fun undoRemove() {
-      undoItem(
-         currentList = _peopleUiStateFlow.value.people,
+      logDebug(TAG, "undoRemove()")
+
+      val currentList = _peopleUiStateFlow.value.people
+
+      // 1) Pure helper: restore from undo buffer
+      val result = optimisticUndoRemove(
+         list = currentList,
          getId = { it.id },
-         removedItem = _removedPerson,
-         removedIndex = _removedPersonIndex,
-         updateUi = { restoredList, restoredId ->
-            updateState(_peopleUiStateFlow) { copy(people = restoredList, restoredPersonId = restoredId) }
-         },
-         persistCreate = { _personUc.create(it) },
-         onReset = { _removedPerson = null; _removedPersonIndex = -1 },
-         tag = TAG
+         undoBuffer = _undoBuffer
       )
+      // Extract results
+      val updatedList = result.updatedList
+      val restoredId = result.restoredId
+
+      // 2) Clear or update undo buffer
+      _undoBuffer = result.newBuffer
+      // If nothing changed, stop here
+      if (updatedList === currentList && restoredId == null) return
+
+      // 3) Update UI state immediately (Optimistic)
+      updateState(_peopleUiStateFlow) {
+         copy(people = updatedList, restoredPersonId = restoredId) }
+
+      // 4) Persist recreation in the background (Then-Persist)
+      if (restoredId != null) {
+         val restoredPerson = updatedList.firstOrNull { it.id == restoredId }
+         if (restoredPerson != null) {
+            viewModelScope.launch {
+               logDebug(TAG, "persistCreate(${restoredPerson.id})")
+               _personUc.create(restoredPerson)
+                  .onFailure { handleErrorEvent(it) }
+            }
+         }
+      }
    }
+   // Called by the UI once the scroll animation to restoredPersonId has finished.
+   // This clears the flag so future restore operations can update it again.
    private fun restored() {
       logDebug(TAG, "restored() acknowledged by UI")
-      // The UI has finished scrolling, so we clear the ID
       updateState(_peopleUiStateFlow) { copy(restoredPersonId = null) }
+   }
+
+   // Finalizes a person deletion **after** the UNDO window has expired.
+   // Is triggered from the Snackbar's `onDismissed` callback.
+   // It is called ONLY when the user did *not* press the UNDO action.
+   // Workflow:
+   // - Read the last removed person from the undo buffer.
+   //    If the buffer is empty → the user has already undone the removal → nothing to do.
+   // - Extract the `imagePath` of the removed person.
+   // - Immediately clear the undo buffer so that the deletion is final and cannot be undone anymore.
+   // - If the person had a local image, delete it from app storage.
+   // This completes the two-phase deletion workflow:
+   private fun commitDeleteIfNotUndone() {
+      logDebug(TAG, "commitDeleteIfNotUndone()")
+
+      val removed = _undoBuffer.removedItem ?: return
+      val imagePath = removed.imagePath
+
+      // Clear buffer first so we don't accidentally reuse it
+      _undoBuffer = _undoBuffer.cleared()
+
+      if (imagePath.isNullOrBlank()) return
+
+      viewModelScope.launch {
+         _imageUc.deleteImageLocal(imagePath)
+            .onFailure { handleErrorEvent(it) }
+      }
+   }
+   // endregion
+
+   // region Image selection -----------------------------------------------------------------------
+   private fun selectImage(uriString: String, groupName: String) {
+      viewModelScope.launch {
+         _imageUc.selectImage(uriString, groupName).fold(
+            onSuccess = { uri ->
+               val path = uri.path ?: uri.toString()
+               handlePersonIntent(PersonIntent.ImagePathChange(path))
+            },
+            onFailure = { handleErrorEvent(it) }
+         )
+      }
+   }
+   private fun captureImage(uriString: String, groupName: String) {
+      viewModelScope.launch {
+         _imageUc.captureImage(uriString, groupName).fold(
+            onSuccess = { uri ->
+               val path = uri.path ?: uri.toString()
+               handlePersonIntent(PersonIntent.ImagePathChange(path))
+            },
+            onFailure = {  handleErrorEvent(it) }
+         )
+      }
    }
    // endregion
 
@@ -222,9 +337,14 @@ class PersonViewModel(
 
    // region Fetch all (persisted → UI) ------------------------------------------------------------
    // Read all people from the repository and keep PeopleUiState in sync
-// with the reactive Room-backed flow.
+   // with the reactive backed flow.
+   private var _fetchJob: Job? = null
+
    private fun fetch() {
-      viewModelScope.launch {
+      // stop a running flow connection
+      _fetchJob?.cancel()
+
+      _fetchJob = viewModelScope.launch {
          _peopleUc.fetchSorted()
             // Runs once when the flow collection starts
             // (e.g. in init{} or when fetch() is explicitly called again).

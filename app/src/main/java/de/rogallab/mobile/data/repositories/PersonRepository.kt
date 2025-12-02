@@ -16,7 +16,6 @@ class PersonRepository(
    private val _dispatcher: CoroutineDispatcher = Dispatchers.IO
 ) : IPersonRepository {
    override fun getAllSorted(): Flow<Result<List<Person>>> =
-//    _dataStore.selectAllSorted().asResult()
       _dataStore.selectAllSorted()
          // Flow<List<Person>> -> Flow<Result<List<Person>>>
          .map { value -> Result.success(value) }

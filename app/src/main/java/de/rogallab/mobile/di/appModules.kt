@@ -84,8 +84,6 @@ val defModules: Module = module {
       )
    }
 
-
-
    logInfo(tag, "single    -> PersonRepository: IPersonRepository")
    single<IPersonRepository> {
       PersonRepository(

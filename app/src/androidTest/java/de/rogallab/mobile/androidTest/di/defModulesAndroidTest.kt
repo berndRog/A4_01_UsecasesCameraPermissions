@@ -15,6 +15,10 @@ import de.rogallab.mobile.domain.IImageUseCases
 import de.rogallab.mobile.domain.IPeopleUseCases
 import de.rogallab.mobile.domain.IPersonRepository
 import de.rogallab.mobile.domain.IPersonUseCases
+import de.rogallab.mobile.domain.usecases.images.ImageUcCaptureCam
+import de.rogallab.mobile.domain.usecases.images.ImageUcDeleteLocal
+import de.rogallab.mobile.domain.usecases.images.ImageUcSelectGal
+import de.rogallab.mobile.domain.usecases.images.ImageUseCases
 import de.rogallab.mobile.domain.usecases.people.PeopleUcFetchSorted
 import de.rogallab.mobile.domain.usecases.people.PeopleUseCases
 import de.rogallab.mobile.domain.usecases.person.PersonUcCreate
@@ -136,6 +140,43 @@ fun defModulesAndroidTest(
          create = get<PersonUcCreate>(),
          updateWithLocalImage = get<PersonUcUpdateWithLocalImage>(),
          remove = get<PersonUcRemove>()
+      )
+   }
+
+   // single ImageUseCases
+   logInfo(tag, "single    -> ImagesUcCapture")
+   single {
+      ImageUcCaptureCam(
+         _appStorage = get<IAppStorage>(),
+         _mediaStore = get<IAppMediaStore>()
+      )
+   }
+   logInfo(tag, "single    -> ImageUcSelectFromGallery")
+   single {
+      ImageUcSelectGal(
+         _appStorage = get<IAppStorage>(),
+         _mediaStore = get<IAppMediaStore>()
+      )
+   }
+   logInfo(tag, "single    -> ImageUcDeleteLocalSelectFromGallery")
+   single {
+      ImageUcSelectGal(
+         _appStorage = get<IAppStorage>(),
+         _mediaStore = get<IAppMediaStore>()
+      )
+   }
+   logInfo(tag, "single    -> ImageUcDeleteLocal")
+   single {
+      ImageUcDeleteLocal(
+         _appStorage = get<IAppStorage>()
+      )
+   }
+   // Aggregation
+   single<IImageUseCases> {
+      ImageUseCases(
+         captureImage = get<ImageUcCaptureCam>(),
+         selectImage = get<ImageUcSelectGal>(),
+         deleteImageLocal = get<ImageUcDeleteLocal>()
       )
    }
 

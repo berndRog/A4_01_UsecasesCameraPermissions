@@ -64,11 +64,10 @@ class PersonViewModelIntegrationTest : KoinTest {
    private val fileName = "people.json"
 
    private lateinit var _context: Context
-   private lateinit var _uc: IPeopleUseCases
+   private lateinit var _useCases: IPeopleUseCases
    private lateinit var _seed: Seed
    private lateinit var _dataStore: IDataStore
    private lateinit var _repository: IPersonRepository
-   private lateinit var _appHome: Path
    private lateinit var _filePath: Path
    private lateinit var _seedPeople: List<Person>
    private lateinit var _viewModel: PersonViewModel
@@ -124,7 +123,7 @@ class PersonViewModelIntegrationTest : KoinTest {
       _seed = koin.get<Seed>()
       _dataStore = koin.get<IDataStore>()
       _repository = koin.get<IPersonRepository>()
-      _uc = koin.get<IPeopleUseCases>()
+      _useCases = koin.get<IPeopleUseCases>()
       val navKey: NavKey = PeopleList
       val navHandler: INavHandler = koin.get { parametersOf(navKey) }
       _viewModel = koin.get { parametersOf(navHandler) }

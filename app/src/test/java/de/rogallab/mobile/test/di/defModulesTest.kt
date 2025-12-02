@@ -112,7 +112,6 @@ fun defModulesTest(
    }
 
    // single PersonUseCases
-   // single PersonUseCases
    logInfo(tag, "single    -> PersonUcFetchById")
    single { PersonUcFetchById(get<IPersonRepository>()) }
    logInfo(tag, "single    -> PersonUcCreate")
@@ -124,7 +123,6 @@ fun defModulesTest(
          _appStorage = get<IAppStorage>()
       )
    }
-
    logInfo(tag, "single    -> PersonUcRemove")
    single { PersonUcRemove(get<IPersonRepository>()) }
    // Aggregation
@@ -137,6 +135,8 @@ fun defModulesTest(
          remove = get<PersonUcRemove>()
       )
    }
+
+
 
    //== ui modules =================================================================================
    logInfo(tag, "test single    -> PersonValidator")
